@@ -46,7 +46,10 @@ Mỗi quyết định dưới đây là `Accepted` cho phiên bản đầu. Thay
 
 ## ADR 011 Tutor xem Student liên quan
 
-**Quyết định:** Tutor chỉ xem hồ sơ tối thiểu của Student khi có booking giữa hai bên. Student Service xác minh quan hệ qua internal authorization query đến Scheduling hoặc signed service credential; không tin `studentId` do client tự khai.
+**Quyết định:** Tutor chỉ xem hồ sơ tối thiểu của Student khi có booking giữa hai
+bên. Student Service truyền nguyên JWT Tutor tới internal relationship query của
+Scheduling; Gateway không route endpoint này. Không tin `studentId` do client tự
+khai.
 
 ## ADR 012 Quan sát hệ thống
 

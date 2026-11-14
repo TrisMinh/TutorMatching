@@ -1,0 +1,10 @@
+{
+  "ignores": [
+    "docs/superpowers/**"
+  ],
+  "config": {
+    "MD012": false,
+    "MD013": false,
+    "MD060": false
+  }
+}

@@ -31,7 +31,9 @@
 
 - TLS cho traffic ngoài host; production-like TLS/validated cert cho DB/Redis/RabbitMQ nếu đi qua network không tin cậy.
 - PostgreSQL volume/backup encryption do platform; secret không nằm trong backup plaintext logs.
-- Password hash bằng ASP.NET Identity PBKDF2 cấu hình mạnh hoặc Argon2id; per-user salt tự quản lý bởi library; có rehash-on-login khi cost tăng.
+- Password hash bằng ASP.NET Core PasswordHasher IdentityV3,
+  PBKDF2-HMAC-SHA512, 210.000 vòng; per-user salt/parameters do library quản lý;
+  rehash-on-login khi cost tăng.
 - Token hash SHA-256 vì token có entropy cao; không dùng SHA-256 cho password.
 - Application log redaction bằng key allow/deny list và test snapshot.
 

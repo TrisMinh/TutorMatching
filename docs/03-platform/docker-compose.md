@@ -69,7 +69,9 @@ scheduling-service:
   security_opt: ["no-new-privileges:true"]
 ```
 
-Runtime image phải có health client (`wget/curl`) hoặc dùng .NET health probe binary; không giả định tool không tồn tại.
+Runtime Dockerfile cài `curl` tối thiểu và healthcheck dùng
+`curl --fail --silent http://localhost:8080/health/ready`; image scan phải bao gồm
+package này. Không giả định tool tồn tại nếu Dockerfile chưa cài.
 
 ## Dependency health
 
@@ -85,7 +87,9 @@ Named volumes cho 5 DB và RabbitMQ. Redis không cần volume baseline. Source 
 
 ## Startup và migration
 
-Khuyến nghị migration job per service chạy sau DB healthy và trước app. Job dùng cùng image với command `dotnet <Service>.Api.dll --migrate` hoặc migration bundle; exit 0 mới cho app start. Seed chỉ Development flag. Không chạy 5 app tự migrate đồng thời.
+Migration job per service chạy sau DB healthy và trước app, dùng cùng image với
+command `dotnet <Service>.Api.dll --migrate`; exit 0 mới cho app start. Seed chỉ
+Development flag. Không chạy 5 app tự migrate đồng thời.
 
 ## Profiles
 

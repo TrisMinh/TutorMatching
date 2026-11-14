@@ -64,22 +64,30 @@ Tutor only; replace toàn bộ window trong range quản lý, transaction và ve
 
 ### POST `/internal/v1/tutors/{id}/validate-slot`
 
-Scheduling only; input `{ subjectId,startAtUtc,endAtUtc }`; trả `{ tutorExists,isActive,teachesSubject,isWithinAvailability,version }`. Endpoint không kiểm booking.
+Chỉ Scheduling gọi qua private network và truyền nguyên JWT Student; Tutor Service
+xác thực Student role. Input `{ subjectId,startAtUtc,endAtUtc }`; trả
+`{ tutorExists,isActive,teachesSubject,isWithinAvailability,version }`. Endpoint
+không kiểm booking và Gateway không expose route này.
 
 ## Phân quyền
 
 - Tutor chỉ sửa profile/availability khớp JWT sub.
 - Student/Admin được search/đọc active profile.
-- Internal endpoint yêu cầu service credential scope `tutor.validate-slot`.
+- Internal endpoint yêu cầu JWT Student hợp lệ được truyền từ request gốc và chỉ
+  tồn tại trên private route; v1 chưa có service credential riêng.
 - Suspended tutor không xuất hiện search và không validate slot mới.
 
 ## Cache
 
-Optional read cache chỉ sau khi đo. Nếu dùng Redis shared instance, prefix `tutor-cache:v1:` và TTL <= 60 giây; invalidate sau commit profile/availability. Correctness không phụ thuộc cache.
+V1 không cache Tutor read model. Chỉ bổ sung cache sau khi đo và có ADR;
+correctness không được phụ thuộc cache.
 
 ## Biến môi trường
 
-`ConnectionStrings__TutorDb`, `Jwt__Issuer`, `Jwt__Audience`, `Jwt__SigningKey`, `InternalAuth__Audience`, `InternalAuth__RequiredScope`, `Search__MaxPageSize=100`, `Availability__MaxRangeDays=31`, `OTEL_EXPORTER_OTLP_ENDPOINT` cùng biến ASP.NET chuẩn.
+`ConnectionStrings__TutorDb`, `Jwt__Issuer`, `Jwt__Audience`,
+`Jwt__SigningKey`, `Search__MaxPageSize=100`,
+`Availability__MaxRangeDays=31`, `OTEL_EXPORTER_OTLP_ENDPOINT` cùng biến ASP.NET
+chuẩn.
 
 ## Migration
 

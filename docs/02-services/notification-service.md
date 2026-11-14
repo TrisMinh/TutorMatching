@@ -64,7 +64,9 @@ Mỗi 15 giây:
 ## Kênh
 
 - In-app bắt buộc: tạo row là delivery thành công logic.
-- Email Development: SMTP Mailpit `mailpit:1025`, không auth/TLS trong private network; management UI host 8025 chỉ dev.
+- Email Development: SMTP Mailpit `mailpit:1025`, không auth/TLS trong private
+  network; địa chỉ demo được suy ra thành
+  `{recipientUserId}@demo.tutormatching.local`; management UI host 8025 chỉ dev.
 - Production provider ngoài phạm vi; adapter `INotificationSender` phải nhận idempotency key và cancellation token.
 
 ## API
@@ -88,7 +90,8 @@ Không có public endpoint tạo notification tùy ý.
 - JWT authenticated cho API, resource owner bắt buộc.
 - RabbitMQ credential chỉ consume queue và publish retry/DLX theo topology cần thiết.
 - Template không chứa secret; title/body tránh PII nhạy cảm trong log.
-- Email address nếu cần phải lấy từ projection được bảo vệ hoặc event riêng tối thiểu; baseline có thể dùng development fixture mapping.
+- V1 không cần email thật trong event hoặc projection; chỉ dùng địa chỉ demo suy
+  ra từ userId. Provider production phải có ADR về recipient projection và consent.
 
 ## Biến môi trường
 

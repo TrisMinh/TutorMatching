@@ -42,8 +42,13 @@ Giới hạn 100 tutor/request, range tối đa 7 ngày. Response nhóm theo tut
 
 ## Authentication nội bộ
 
-- User-driven call truyền nguyên JWT user để downstream kiểm role/owner.
-- Worker/system call dùng service credential audience `tutormatching-internal`, claim `client_id` và scope allow-list.
+- Tất cả internal call v1 là user-driven và truyền nguyên JWT user để downstream
+  kiểm role/owner. Scheduling truyền JWT Student khi validate slot; Student truyền
+  JWT Tutor khi xác minh relationship.
+- Gateway không expose `/internal`; Docker network giảm bề mặt tấn công nhưng
+  không thay authentication.
+- V1 không có client-credentials/service token. Background worker không gọi API
+  nội bộ. Nếu xuất hiện system call mới, phải có ADR và flow cấp service identity.
 - Không dùng header `X-User-Id` không ký làm nguồn danh tính.
 
 ## Correlation và trace

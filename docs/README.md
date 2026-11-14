@@ -27,6 +27,27 @@ Từ **PHẢI**, **KHÔNG ĐƯỢC**, **NÊN** và **CÓ THỂ** mang nghĩa quy
 - `07-delivery`: workflow, Definition of Done, phân công.
 - `diagrams`: nguồn PlantUML và hướng dẫn render.
 
+## Tài liệu chi tiết
+
+| Chủ đề | Tài liệu |
+|---|---|
+| Kiến trúc | [System architecture](01-architecture/system-architecture.md), [DDD/domain](01-architecture/domain-model.md), [Communication](01-architecture/service-communication.md), [ADR](01-architecture/architecture-decisions.md) |
+| Contract | [API standards](01-architecture/api-standards.md), [Event catalog](01-architecture/event-catalog.md), [Data ownership](01-architecture/data-ownership.md) |
+| Service | [Identity](02-services/identity-service.md), [Tutor](02-services/tutor-service.md), [Student](02-services/student-service.md), [Scheduling](02-services/scheduling-service.md), [Notification](02-services/notification-service.md) |
+| Platform | [Gateway](03-platform/api-gateway.md), [PostgreSQL](03-platform/postgresql.md), [Redis](03-platform/redis.md), [RabbitMQ](03-platform/rabbitmq.md), [Compose](03-platform/docker-compose.md), [Ports](03-platform/ports-and-networking.md), [Configuration](03-platform/configuration-reference.md) |
+| Security | [JWT](04-security/jwt-and-authorization.md), [Hardening](04-security/security-hardening.md), [Secrets](04-security/secrets-and-data-protection.md) |
+| Operations | [Observability](05-operations/observability.md), [Runbook](05-operations/runbook.md), [Backup](05-operations/backup-and-recovery.md) |
+| Testing | [Strategy](06-testing/test-strategy.md), [E2E](06-testing/e2e-scenarios.md), [Postman](06-testing/postman-guide.md) |
+| Delivery | [Workflow](07-delivery/development-workflow.md), [Definition of Done](07-delivery/definition-of-done.md), [Ownership](07-delivery/team-ownership.md) |
+| Visual model | [PlantUML index](diagrams/README.md) |
+
+## Sơ đồ nên mở cùng tài liệu
+
+- Tổng thể: [system context](diagrams/system-context.puml), [container architecture](diagrams/container-architecture.puml), [Compose deployment](diagrams/deployment-compose.puml), [DDD context map](diagrams/ddd-context-map.puml).
+- Domain/data: [Identity](diagrams/identity-domain.puml), [Tutor](diagrams/tutor-domain.puml), [Student](diagrams/student-domain.puml), [Scheduling](diagrams/scheduling-domain.puml), [Notification](diagrams/notification-domain.puml), [database ERD](diagrams/database-erd.puml).
+- Luồng: [login](diagrams/login-sequence.puml), [search](diagrams/search-sequence.puml), [booking](diagrams/booking-sequence.puml), [cancel](diagrams/cancel-sequence.puml), [notification](diagrams/notification-sequence.puml), [booking state](diagrams/booking-state.puml).
+- Hạ tầng: [RabbitMQ](diagrams/rabbitmq-topology.puml), [Redis hold](diagrams/redis-hold-flow.puml), [request tracing](diagrams/request-tracing.puml).
+
 ## Quyết định nền tảng
 
 - 5 bounded context tương ứng 5 microservice; mỗi service sở hữu database riêng.

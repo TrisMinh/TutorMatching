@@ -23,7 +23,10 @@ Invariant:
 | `student_profiles` | `id uuid PK`, `user_id uuid UNIQUE`, display_name varchar(100), education_level varchar(30) check, learning_goal varchar(2000), timezone varchar(100), status check, timestamps, version int |
 | `student_subject_interests` | `(student_id, subject_id) PK`, priority smallint check 1..5, created_at; FK nội bộ student only |
 
-`subject_id` là external reference đến Tutor subject catalog, không foreign key xuyên DB. Validation có thể dùng cached catalog contract; nếu Tutor unavailable trong update, trả 503 thay vì lưu ID chưa xác minh. Index `(subject_id, priority)` chỉ khi có query nghiệp vụ.
+`subject_id` là external reference đến Tutor subject catalog, không foreign key
+xuyên DB. PUT profile gọi Tutor internal subject-validation bằng JWT Student; nếu
+Tutor unavailable, trả 503 thay vì lưu ID chưa xác minh. Index
+`(subject_id, priority)` chỉ tạo khi có query nghiệp vụ sử dụng.
 
 ## API
 
@@ -51,7 +54,7 @@ Tạo mới trả 201 + Location/ETag; update trả 200 + ETag. Không nhận ro
 
 - Admin: full non-sensitive profile.
 - Tutor: chỉ khi Scheduling trả `hasRelationship=true` cho Tutor user/tutor và student; response tối thiểu gồm displayName, educationLevel, learningGoal, subject interests, không có userId.
-- Student khác: 403 hoặc 404 theo anti-enumeration policy thống nhất.
+- Student khác: 404 để chống enumeration.
 
 ### GET `/internal/v1/students/by-user/{userId}`
 
@@ -59,7 +62,12 @@ Scheduling service scope `student.resolve`; trả studentId + active flag để 
 
 ## Xác minh quan hệ Tutor-Student
 
-Student Service gọi `GET /internal/v1/relationships/tutors/{tutorUserId}/students/{studentId}` tại Scheduling bằng user token + service credential. Scheduling map tutorUserId theo dữ liệu đã biết/contract và trả true nếu có Confirmed hoặc Cancelled gần đây theo retention policy. Timeout 5 giây; không cache allow quá 30 giây; dependency lỗi trả 503, không fail-open.
+Student Service gọi
+`GET /internal/v1/relationships/tutors/{tutorUserId}/students/{studentId}` tại
+Scheduling và truyền nguyên JWT Tutor của request gốc. Scheduling so `sub` với
+`tutorUserId`, xác thực role Tutor và trả true nếu có Confirmed hoặc Cancelled gần
+đây theo retention policy. Timeout 5 giây; cache kết quả allow tối đa 30 giây;
+dependency lỗi trả 503, không fail-open.
 
 ## Phân quyền
 
@@ -72,7 +80,10 @@ Student Service gọi `GET /internal/v1/relationships/tutors/{tutorUserId}/stude
 
 ## Biến môi trường
 
-`ConnectionStrings__StudentDb`, JWT variables, `Services__SchedulingBaseUrl=http://scheduling-service:8080`, `ServiceAuth__ClientId`, `ServiceAuth__ClientSecret` hoặc token provider, `Authorization__RelationshipCacheSeconds=30`, `Profiles__MaxInterests=20`, OTEL variables.
+`ConnectionStrings__StudentDb`, JWT variables,
+`Services__SchedulingBaseUrl=http://scheduling-service:8080`,
+`Authorization__RelationshipCacheSeconds=30`, `Profiles__MaxInterests=20`, OTEL
+variables. Không có service client secret trong v1.
 
 ## Migration và seed
 
@@ -88,5 +99,5 @@ Migration tạo profile/interest/check/index; không seed PII. Test fixture tạ
 - Domain: enum, timezone, length, duplicate/priority interests.
 - Integration: userId unique, optimistic concurrency, transaction replace interests, migration.
 - API: owner success; Student A không sửa/đọc Student B; role/status mass assignment bị bỏ/từ chối; Tutor relation true/false/timeout; Admin access; 401/403/412.
-- Security: ID enumeration, malicious string, log redaction, service credential scope.
+- Security: ID enumeration, malicious string, log redaction, propagated JWT.
 

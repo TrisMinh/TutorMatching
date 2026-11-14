@@ -12,13 +12,14 @@ Redis 7.4 chỉ dùng cho Scheduling hold TTL và, khi có đo đạc, idempoten
 | `sched:hold:v1:tutor:{tutorId}:{startEpoch}` | holdId | 300s |
 | `sched:hold:v1:student:{studentId}:{startEpoch}` | holdId | 300s |
 | `idem:v1:{userId}:{route}:{key}` | request hash + response | 24h khi endpoint hỗ trợ |
-| `tutor-cache:v1:{...}` | read projection optional | <=60s |
 
 Tất cả key bắt buộc version/prefix/TTL. Không dùng `KEYS` production; scan theo prefix khi chẩn đoán. Không đưa email/token raw vào key/value.
 
 ## Atomic hold Lua
 
-Script create kiểm tất cả tutor/student keys có thể overlap trên grid 30 phút, rồi set lock+metadata với cùng TTL trong một atomic execution. Input đã parse/validate ở application; script vẫn từ chối nếu key tồn tại. Output code cố định: `OK`, `TUTOR_HELD`, `STUDENT_HELD`.
+Script create kiểm sáu tutor/student lock key tại `start-30`, `start`, `start+30`
+trên grid 30 phút, rồi set exact-start lock + metadata cùng TTL trong một atomic
+execution. Output code cố định: `OK`, `TUTOR_HELD`, `STUDENT_HELD`.
 
 Script release nhận metadata key, expected holdId, owner userId và tokenHash; so sánh rồi xóa tất cả lock thuộc hold. Nếu mismatch trả `NOT_OWNER` và không xóa. Confirm commit trước release; TTL dọn cuối.
 

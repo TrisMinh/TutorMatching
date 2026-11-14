@@ -39,7 +39,8 @@ Gateway thực hiện 1-2 để giảm tải; service lặp 1-4. Internal networ
 - `StudentOnly`, `TutorOnly`, `AdminOnly`, `AuthenticatedUser`.
 - `BookingParticipant`: Scheduling load Booking và so `studentUserId/tutorUserId` với `sub`, Admin chỉ khi endpoint ghi rõ.
 - `ProfileOwner`: Tutor/Student map userId chính chủ.
-- Service policy: audience `tutormatching-internal`, `client_id`, scope như `tutor.validate-slot`; tách signing/client credential nếu có thể.
+- Internal v1 truyền nguyên user JWT, callee áp role/owner; `/internal` không được
+  route qua Gateway. Service identity/client credentials được hoãn bằng ADR.
 
 ## 401 và 403
 

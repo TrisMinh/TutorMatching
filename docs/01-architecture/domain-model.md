@@ -27,7 +27,9 @@
 ### Identity
 
 - Email chuẩn hóa lowercase/trim và unique.
-- Password chỉ lưu hash Argon2id hoặc ASP.NET Identity PBKDF2 cấu hình mạnh; không reversible.
+- Password dùng ASP.NET Core `PasswordHasher` IdentityV3 với
+  PBKDF2-HMAC-SHA512, 210.000 vòng; hash tự chứa salt/parameters và được rehash
+  khi policy tăng.
 - Role chỉ `Student`, `Tutor`, `Admin`; client không tự gán Admin.
 - Mỗi refresh token chỉ dùng một lần; reuse làm revoke cả token family.
 

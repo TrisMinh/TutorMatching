@@ -6,18 +6,19 @@ Baseline chạy 5 PostgreSQL container để minh họa database-per-service rõ
 
 | Container | Database | Role owner/app | Volume |
 |---|---|---|---|
-| `identity-db` | `IdentityDb` | `identity_app` | `identity_db_data` |
-| `tutor-db` | `TutorDb` | `tutor_app` | `tutor_db_data` |
-| `student-db` | `StudentDb` | `student_app` | `student_db_data` |
-| `scheduling-db` | `SchedulingDb` | `scheduling_app` | `scheduling_db_data` |
-| `notification-db` | `NotificationDb` | `notification_app` | `notification_db_data` |
+| `identity-db` | `identity_db` | `identity_app` | `identity_db_data` |
+| `tutor-db` | `tutor_db` | `tutor_app` | `tutor_db_data` |
+| `student-db` | `student_db` | `student_app` | `student_db_data` |
+| `scheduling-db` | `scheduling_db` | `scheduling_app` | `scheduling_db_data` |
+| `notification-db` | `notification_db` | `notification_app` | `notification_db_data` |
 
-Tên PostgreSQL lowercase thực tế có thể là `identity_db`; connection string là nguồn chuẩn. Không dùng superuser từ application. Migration role có DDL privilege có thể tách khỏi runtime role production-like.
+Tên database PostgreSQL là lowercase snake_case như bảng trên; tên logic trong
+tài liệu service vẫn là IdentityDb/TutorDb/... Không dùng superuser từ application.
 
 ## Connection string
 
 ```text
-Host=identity-db;Port=5432;Database=IdentityDb;Username=identity_app;Password=<secret>;Pooling=true;Minimum Pool Size=0;Maximum Pool Size=50;Timeout=5;Command Timeout=30;Application Name=identity-service;Include Error Detail=false
+Host=identity-db;Port=5432;Database=identity_db;Username=identity_app;Password=<secret>;Pooling=true;Minimum Pool Size=0;Maximum Pool Size=50;Timeout=5;Command Timeout=30;Application Name=identity-service;Include Error Detail=false
 ```
 
 Mỗi service max pool 50 baseline; tổng pool phải nhỏ hơn `max_connections` sau khi tính replica/migration/admin. Request timeout phải ngắn hơn upstream timeout. Không bật `Include Error Detail` ngoài Development.
@@ -40,7 +41,9 @@ Mỗi service max pool 50 baseline; tổng pool phải nhỏ hơn `max_connectio
 
 Invariant quan trọng phải có DB constraint: unique email/userId/eventId; check enum/range; exclusion booking/availability. Map SQLSTATE có chủ đích (`23505` unique, `23514` check, `23P01` exclusion) sang 409/422; không trả SQL message.
 
-EF optimistic concurrency dùng `version` hoặc xmin có contract rõ; stale update trả 412. Transaction giữ ngắn, không gọi HTTP/Rabbit trong transaction.
+EF optimistic concurrency dùng cột `version integer`; application tăng version
+trong update có predicate version cũ, stale update trả 412. Transaction giữ ngắn,
+không gọi HTTP/Rabbit trong transaction.
 
 ## Health và tuning
 

@@ -21,7 +21,9 @@ Domain không tham chiếu ASP.NET Core, EF Core hoặc JWT library. Application
 
 - `Id`, `Email`, `NormalizedEmail`, `PasswordHash`, `Role`, `Status`, `CreatedAtUtc`, `UpdatedAtUtc`, `LastLoginAtUtc`, `Version`.
 - `Register`: chỉ Student/Tutor; Admin được seed/admin command riêng.
-- `VerifyPassword`: không phân biệt lỗi email và mật khẩu ở response.
+- `VerifyPassword`: dùng ASP.NET Core `PasswordHasher` IdentityV3,
+  PBKDF2-HMAC-SHA512, `IterationCount=210000`; không phân biệt lỗi email và mật
+  khẩu ở response; rehash-on-login khi policy tăng.
 - `Disable/Enable`: disabled account không login/refresh.
 - `ChangeRole`: chỉ admin flow; không có trong profile DTO.
 
@@ -108,7 +110,11 @@ Trả `{ "userId", "email", "role", "status" }`; không trả hash/session.
 
 ## Biến môi trường
 
-`ASPNETCORE_ENVIRONMENT`, `ASPNETCORE_URLS`, `ConnectionStrings__IdentityDb`, `Jwt__Issuer`, `Jwt__Audience`, `Jwt__SigningKey`, `Jwt__AccessTokenMinutes=15`, `Jwt__RefreshTokenDays=7`, `Jwt__ClockSkewSeconds=30`, `PasswordHashing__IterationCount`, `OTEL_EXPORTER_OTLP_ENDPOINT`.
+`ASPNETCORE_ENVIRONMENT`, `ASPNETCORE_URLS`, `ConnectionStrings__IdentityDb`,
+`Jwt__Issuer`, `Jwt__Audience`, `Jwt__SigningKey`,
+`Jwt__AccessTokenMinutes=15`, `Jwt__RefreshTokenDays=7`,
+`Jwt__ClockSkewSeconds=30`, `PasswordHashing__IterationCount=210000`,
+`OTEL_EXPORTER_OTLP_ENDPOINT`.
 
 ## Migration và seed
 

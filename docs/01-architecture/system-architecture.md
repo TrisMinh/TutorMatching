@@ -31,7 +31,9 @@ Mỗi service còn lại -> PostgreSQL database riêng
 - Public: host ports của UI và Gateway. RabbitMQ Management, PostgreSQL, Redis chỉ mở loopback trong local profile.
 - Gateway đến service: private `backend` network; vẫn truyền JWT và W3C trace headers.
 - Service đến database/broker: private `data` network; credential riêng, least privilege.
-- Internal endpoint không được coi là an toàn chỉ vì ở private network; service-to-service action dùng user token hoặc service credential rõ ràng.
+- Internal endpoint không được coi là an toàn chỉ vì ở private network. Trong
+  v1, mọi internal call đều phát sinh từ request người dùng và truyền nguyên JWT
+  đó; callee xác thực role/owner. Gateway không route `/internal` ra public.
 
 ## Luồng đọc và ghi
 

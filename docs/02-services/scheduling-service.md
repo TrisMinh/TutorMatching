@@ -71,13 +71,19 @@ Query indexes: participant/status/start; tutor/status/start; upcoming. Không d�
 - Metadata: `sched:hold:v1:id:{holdId}`.
 - TTL mọi key 300 giây; key hash-tag có thể bổ sung nếu dùng Redis Cluster để Lua cùng slot.
 
-Metadata JSON: holdId, studentId/userId, tutorId/userId, subjectId, start/end, created/expired. API trả `holdToken`, là random 256-bit hoặc signed opaque token; Redis chỉ lưu hash để log/DB leak không dùng được.
+Metadata JSON: holdId, studentId/userId, tutorId/userId, subjectId, start/end,
+created/expired. API trả `holdToken` là 32 random bytes mã hóa Base64URL (256-bit);
+Redis chỉ lưu SHA-256 hash để log/Redis leak không dùng được.
 
 ### Lua create atomic
 
-Một script nhận ba keys, payload và TTL. Nếu slot/student key tồn tại trả conflict; ngược lại `SET ... NX PX 300000` cả ba trong cùng script và trả success. Không dùng chuỗi lệnh SET riêng. Release script chỉ DEL nếu metadata holdId/tokenHash/owner khớp; không cho client xóa hold người khác.
+Script nhận metadata key và sáu lock key: tutor/student tại `start-30`, `start`,
+`start+30`. Nếu bất kỳ key tồn tại, trả conflict; ngược lại set lock của exact
+start và metadata với `PX 300000` trong cùng script. Không dùng chuỗi lệnh SET
+riêng. Release script chỉ DEL nếu holdId/tokenHash/owner khớp.
 
-**Giới hạn:** Student lock theo exact start chưa ngăn overlapping start 30 phút. Vì slot cố định và grid 30 phút, script phải kiểm cả các candidate start có thể overlap (`start-30`, `start`, `start+30`) cho tutor và student, hoặc dùng sorted-set + Lua range query. DB constraints vẫn là lớp cuối.
+Vì slot dài 60 phút trên grid 30 phút, bộ key `start-30`, `start`, `start+30`
+bao phủ mọi hold có thể overlap. DB constraints vẫn là lớp cuối.
 
 ## Luồng tạo hold
 
@@ -103,7 +109,9 @@ Không delete hold trước commit. Không publish RabbitMQ bên trong request t
 
 ### GET `/api/v1/slots/available`
 
-Student; query `tutorId`, `subjectId`, `fromUtc`, `toUtc` tối đa 7 ngày. Lấy Tutor availability rồi trừ confirmed bookings; có thể loại active holds cho UX nhưng kết quả chỉ là snapshot. Trả slot + `generatedAtUtc`; client vẫn phải tạo hold.
+Student; query `tutorId`, `subjectId`, `fromUtc`, `toUtc` tối đa 7 ngày. Lấy Tutor
+availability rồi trừ confirmed bookings và active holds cho UX. Kết quả vẫn là
+snapshot; trả slot + `generatedAtUtc`, client luôn phải tạo hold.
 
 ### POST `/api/v1/bookings/holds`
 
@@ -136,7 +144,7 @@ Participant; optional reasonCode allow-list. 204, idempotent. Transaction update
 
 ## Outbox publisher
 
-BackgroundService mỗi 500ms hoặc wake signal:
+BackgroundService poll mỗi 500ms:
 
 1. Claim tối đa 100 row pending bằng transaction `FOR UPDATE SKIP LOCKED` và lease.
 2. Publish persistent message đến `tutormatching.events` với mandatory + publisher confirms.
@@ -145,7 +153,13 @@ BackgroundService mỗi 500ms hoặc wake signal:
 
 ## Biến môi trường
 
-`ConnectionStrings__SchedulingDb`, `Redis__ConnectionString`, `Redis__HoldTtlSeconds=300`, `RabbitMq__Host`, `RabbitMq__VirtualHost=/tutormatching`, `RabbitMq__Username`, `RabbitMq__Password`, `RabbitMq__Exchange=tutormatching.events`, `Services__TutorBaseUrl`, `Services__StudentBaseUrl`, JWT/service-auth/OTEL variables, `Scheduling__SlotMinutes=60`, `Scheduling__GridMinutes=30`, `Scheduling__MaxHorizonDays=90`.
+`ConnectionStrings__SchedulingDb`, `Redis__ConnectionString`,
+`Redis__HoldTtlSeconds=300`, `RabbitMq__Host`,
+`RabbitMq__VirtualHost=/tutormatching`, `RabbitMq__Username`,
+`RabbitMq__Password`, `RabbitMq__Exchange=tutormatching.events`,
+`Services__TutorBaseUrl`, `Services__StudentBaseUrl`, JWT/OTEL variables,
+`Scheduling__SlotMinutes=60`, `Scheduling__GridMinutes=30`,
+`Scheduling__MaxHorizonDays=90`.
 
 ## Migration và Health
 

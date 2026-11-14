@@ -13,7 +13,7 @@ Một service/tính năng hoàn thành khi tất cả mục áp dụng đều đ
 - Image non-root/hardening baseline, dependency/secret/vulnerability scan đạt gate.
 - Chạy độc lập và qua Gateway/Compose; E2E liên quan xanh.
 - Docs service/infrastructure/security/test/PlantUML cập nhật cùng PR.
-- PR review, CI xanh, không unresolved TODO cho behavior critical.
+- PR review, CI xanh, không còn dấu nhắc chưa xử lý cho hành vi critical.
 
 ## Bằng chứng bàn giao
 

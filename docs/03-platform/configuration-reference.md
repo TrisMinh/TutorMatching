@@ -24,11 +24,11 @@
 
 | Service | Biến | Host/DB |
 |---|---|---|
-| Identity | `ConnectionStrings__IdentityDb` | `identity-db:5432/IdentityDb` |
-| Tutor | `ConnectionStrings__TutorDb` | `tutor-db:5432/TutorDb` |
-| Student | `ConnectionStrings__StudentDb` | `student-db:5432/StudentDb` |
-| Scheduling | `ConnectionStrings__SchedulingDb` | `scheduling-db:5432/SchedulingDb` |
-| Notification | `ConnectionStrings__NotificationDb` | `notification-db:5432/NotificationDb` |
+| Identity | `ConnectionStrings__IdentityDb` | `identity-db:5432/identity_db` |
+| Tutor | `ConnectionStrings__TutorDb` | `tutor-db:5432/tutor_db` |
+| Student | `ConnectionStrings__StudentDb` | `student-db:5432/student_db` |
+| Scheduling | `ConnectionStrings__SchedulingDb` | `scheduling-db:5432/scheduling_db` |
+| Notification | `ConnectionStrings__NotificationDb` | `notification-db:5432/notification_db` |
 
 Password qua `${*_DB_PASSWORD}` khi Compose xây connection string hoặc toàn connection `${*_DB_CONNECTION}`. Không log resolved value.
 
@@ -36,15 +36,17 @@ Password qua `${*_DB_PASSWORD}` khi Compose xây connection string hoặc toàn 
 
 ### Identity
 
-`PasswordHashing__IterationCount`, `Security__MaxLoginAttempts`, `Security__LoginWindowSeconds`, `Seed__Enabled=false`.
+`PasswordHashing__IterationCount=210000`, `Security__MaxLoginAttempts`,
+`Security__LoginWindowSeconds`, `Seed__Enabled=false`.
 
 ### Tutor
 
-`Search__MaxPageSize=100`, `Availability__MaxRangeDays=31`, `InternalAuth__Audience=tutormatching-internal`, `InternalAuth__RequiredScope=tutor.validate-slot`.
+`Search__MaxPageSize=100`, `Availability__MaxRangeDays=31`.
 
 ### Student
 
-`Services__SchedulingBaseUrl=http://scheduling-service:8080`, `Authorization__RelationshipCacheSeconds=30`, `Profiles__MaxInterests=20`, service auth credentials/secret.
+`Services__SchedulingBaseUrl=http://scheduling-service:8080`,
+`Authorization__RelationshipCacheSeconds=30`, `Profiles__MaxInterests=20`.
 
 ### Scheduling
 

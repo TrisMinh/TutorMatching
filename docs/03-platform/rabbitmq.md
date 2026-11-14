@@ -13,7 +13,9 @@
 | DLX | `tutormatching.dlx` | durable direct |
 | DLQ | `notification.booking-events.dlq` | durable quorum/classic theo resource |
 
-Topology được khai báo idempotent lúc service start hoặc definitions file. Nếu thuộc tính queue khác hiện có, startup fail rõ thay vì xóa/recreate có mất message.
+Compose mount `rabbitmq-definitions.json` để khai báo vhost, exchange, queue,
+binding và policy idempotently. Application chỉ passive-assert topology; nếu thuộc
+tính khác, readiness fail rõ thay vì xóa/recreate có mất message.
 
 ## User và quyền
 
