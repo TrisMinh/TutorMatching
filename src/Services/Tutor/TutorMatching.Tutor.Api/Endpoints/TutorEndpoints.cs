@@ -164,13 +164,20 @@ public static class TutorEndpoints
         CancellationToken cancellationToken)
     {
         var endAtUtc = startAtUtc.AddHours(1);
-        var valid = await dbContext.TutorProfiles.AsNoTracking().AnyAsync(profile =>
-            profile.Id == id
-            && profile.Status == TutorStatus.Active
-            && profile.Subjects.Any(subject => subject.SubjectId == subjectId)
-            && profile.AvailabilityWindows.Any(window => window.StartAtUtc <= startAtUtc && window.EndAtUtc >= endAtUtc),
-            cancellationToken);
-        return Results.Ok(new { tutorId = id, subjectId, startAtUtc, endAtUtc, valid });
+        var tutor = await dbContext.TutorProfiles.AsNoTracking()
+            .Where(profile => profile.Id == id)
+            .Select(profile => new
+            {
+                profile.Id,
+                profile.UserId,
+                valid = profile.Status == TutorStatus.Active
+                    && profile.Subjects.Any(subject => subject.SubjectId == subjectId)
+                    && profile.AvailabilityWindows.Any(window => window.StartAtUtc <= startAtUtc && window.EndAtUtc >= endAtUtc),
+            })
+            .SingleOrDefaultAsync(cancellationToken);
+        return tutor is null
+            ? Results.NotFound()
+            : Results.Ok(new { tutorId = tutor.Id, tutorUserId = tutor.UserId, subjectId, startAtUtc, endAtUtc, tutor.valid });
     }
 
     private static Guid GetUserId(ClaimsPrincipal principal) =>
