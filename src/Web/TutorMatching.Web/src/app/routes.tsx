@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { authRoutes } from '../features/auth/AuthRoutes';
 import { studentRoutes } from '../features/student/StudentRoutes';
+import { stateRoutes } from '../features/states/StateGallery';
 import { tutorRoutes } from '../features/tutor/TutorRoutes';
 
 export type AppRoute = {
@@ -26,5 +27,6 @@ export const appRoutes: AppRoute[] = [
   ...authRoutes,
   ...studentRoutes,
   ...tutorRoutes,
+  ...stateRoutes,
   { path: '*', element: <NotFoundFoundation /> },
 ];
