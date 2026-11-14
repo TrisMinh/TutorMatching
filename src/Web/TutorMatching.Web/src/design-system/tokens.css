@@ -1,9 +1,33 @@
 @font-face {
-  font-family: "Gilroy";
-  src: url("/assets/figma/gilroy-regular.ttf") format("truetype");
+  font-family: "Gilroy Regular";
+  src: url("/assets/figma/gilroy-regular.otf") format("opentype");
   font-display: swap;
   font-style: normal;
-  font-weight: 400 700;
+  font-weight: 400;
+}
+
+@font-face {
+  font-family: "Gilroy Medium";
+  src: url("/assets/figma/gilroy-medium.otf") format("opentype");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 500;
+}
+
+@font-face {
+  font-family: "Gilroy SemiBold";
+  src: url("/assets/figma/gilroy-semibold.otf") format("opentype");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 600;
+}
+
+@font-face {
+  font-family: "Gilroy SemiBold";
+  src: url("/assets/figma/gilroy-bold.otf") format("opentype");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 700;
 }
 
 :root {
@@ -34,8 +58,9 @@
   --space-6: 24px;
   --space-8: 32px;
   --space-10: 40px;
-  --font-medium: "Gilroy", "Avenir Next", Arial, sans-serif;
-  --font-semibold: "Gilroy", "Avenir Next", Arial, sans-serif;
+  --font-regular: "Gilroy Regular", "Avenir Next", Arial, sans-serif;
+  --font-medium: "Gilroy Medium", "Avenir Next", Arial, sans-serif;
+  --font-semibold: "Gilroy SemiBold", "Avenir Next", Arial, sans-serif;
   --shadow-card: 0 10px 28px rgb(20 23 54 / 8%);
   --focus-ring: 0 0 0 3px rgb(1 119 251 / 22%);
 }

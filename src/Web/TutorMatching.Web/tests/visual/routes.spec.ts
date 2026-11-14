@@ -24,6 +24,24 @@ test('desktop auth composition keeps its exact two-panel surface', async ({ page
   await expect(page.getByRole('heading', { name: 'Welcome back!' })).toBeVisible();
   await expect(page.locator('.auth-showcase')).toBeVisible();
   await expect(page.getByRole('img', { name: 'Tutor helping a student learn' })).toBeVisible();
+  const typography = await page.evaluate(async () => {
+    await document.fonts.ready;
+    const [regular, medium, semiBold, bold] = await Promise.all([
+      document.fonts.load('400 16px "Gilroy Regular"'),
+      document.fonts.load('500 16px "Gilroy Medium"'),
+      document.fonts.load('600 24px "Gilroy SemiBold"'),
+      document.fonts.load('700 24px "Gilroy SemiBold"'),
+    ]);
+    const heading = document.querySelector('h1');
+    return {
+      loadedFaces: [regular.length, medium.length, semiBold.length, bold.length],
+      headingFamily: heading ? getComputedStyle(heading).fontFamily : '',
+    };
+  });
+  expect(typography).toEqual({
+    loadedFaces: [1, 1, 1, 1],
+    headingFamily: '"Gilroy SemiBold", "Avenir Next", Arial, sans-serif',
+  });
   await expectHealthyVisualSurface(page);
 });
 
