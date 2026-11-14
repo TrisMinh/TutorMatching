@@ -4,7 +4,7 @@ using System.Net.Http.Json;
 namespace TutorMatching.Scheduling.Api.Infrastructure;
 
 public sealed record TutorAvailabilityResult(bool Valid, Guid TutorId, Guid TutorUserId);
-public sealed record StudentResult(Guid Id, Guid UserId, string DisplayName, string Timezone);
+public sealed record StudentResult(Guid Id, Guid UserId, string DisplayName, string Timezone, string? AvatarUrl = null,string? EducationLevel=null,string? LearningGoal=null);
 
 public interface ITutorClient
 {

@@ -59,9 +59,9 @@ public sealed partial class ReminderWorker(
 
     private async Task ProcessDueRemindersAsync(CancellationToken cancellationToken)
     {
-        var claimedIds = new List<Guid>();
-        await using (var scope = scopeFactory.CreateAsyncScope())
+        for (var index = 0; index < 20; index++)
         {
+            await using var scope = scopeFactory.CreateAsyncScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<NotificationDbContext>();
             var now = timeProvider.GetUtcNow();
             await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
@@ -73,37 +73,27 @@ public sealed partial class ReminderWorker(
                       AND (status = 'Pending' OR (status = 'Processing' AND lease_until_utc <= {{now}}))
                     ORDER BY scheduled_for_utc
                     FOR UPDATE SKIP LOCKED
-                    LIMIT 20
+                    LIMIT 1
                     """)
                 .ToListAsync(cancellationToken);
-            foreach (var reminder in due)
-            {
-                if (reminder.TryClaim(now, TimeSpan.FromMinutes(2)))
-                {
-                    claimedIds.Add(reminder.Id);
-                }
-            }
-
-            await dbContext.SaveChangesAsync(cancellationToken);
+            var reminder = due.SingleOrDefault();
+            if (reminder is null) return;
+            if (!reminder.TryClaim(now, TimeSpan.FromMinutes(2))) return;
+            // Keep the row lock through bounded delivery. Another replica cannot take
+            // the same reminder while this owner is sending or waiting to commit.
+            await DeliverAsync(dbContext, reminder, scope.ServiceProvider.GetRequiredService<IEmailSender>(), cancellationToken);
             await transaction.CommitAsync(cancellationToken);
-        }
-
-        foreach (var reminderId in claimedIds)
-        {
-            await DeliverAsync(reminderId, cancellationToken);
         }
     }
 
-    private async Task DeliverAsync(Guid reminderId, CancellationToken cancellationToken)
+    private async Task DeliverAsync(NotificationDbContext dbContext, ReminderSchedule reminder, IEmailSender emailSender, CancellationToken cancellationToken)
     {
-        await using var scope = scopeFactory.CreateAsyncScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<NotificationDbContext>();
-        var emailSender = scope.ServiceProvider.GetRequiredService<IEmailSender>();
-        var reminder = await dbContext.ReminderSchedules.SingleAsync(item => item.Id == reminderId, cancellationToken);
         var startedAt = timeProvider.GetUtcNow();
         try
         {
-            await emailSender.SendReminderAsync(reminder.RecipientUserId, reminder.BookingId, cancellationToken);
+            using var sendTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            sendTimeout.CancelAfter(TimeSpan.FromSeconds(10));
+            await emailSender.SendReminderAsync(reminder.RecipientUserId, reminder.BookingId, sendTimeout.Token);
             reminder.MarkSent();
             dbContext.DeliveryAttempts.Add(new DeliveryAttempt
             {

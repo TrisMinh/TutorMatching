@@ -62,6 +62,129 @@ namespace TutorMatching.Tutor.Api.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("TutorMatching.Tutor.Api.Domain.Course", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("Capacity")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Image")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<Guid>("TutorId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TutorId");
+
+                    b.ToTable("courses", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_course_capacity", "\"Capacity\" > 0");
+                        });
+                });
+
+            modelBuilder.Entity("TutorMatching.Tutor.Api.Domain.CourseEnrollment", b =>
+                {
+                    b.Property<string>("CourseId")
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("StudentUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("EnrolledAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("CourseId", "StudentUserId");
+
+                    b.ToTable("course_enrollments", (string)null);
+                });
+
+            modelBuilder.Entity("TutorMatching.Tutor.Api.Domain.CourseSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CourseId")
+                        .IsRequired()
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset>("EndAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("StartAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CourseId");
+
+                    b.ToTable("course_sessions", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_course_session_order", "\"EndAtUtc\" > \"StartAtUtc\"");
+                        });
+                });
+
+            modelBuilder.Entity("TutorMatching.Tutor.Api.Domain.EnrollmentNotice", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AvatarUrl")
+                        .HasMaxLength(2000000)
+                        .HasColumnType("character varying(2000000)");
+
+                    b.Property<string>("CourseId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("ReadAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("StudentName")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<Guid>("StudentUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TutorUserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CourseId", "StudentUserId")
+                        .IsUnique();
+
+                    b.HasIndex("TutorUserId", "CreatedAtUtc");
+
+                    b.ToTable("enrollment_notices", (string)null);
+                });
+
             modelBuilder.Entity("TutorMatching.Tutor.Api.Domain.Subject", b =>
                 {
                     b.Property<Guid>("Id")
@@ -195,6 +318,42 @@ namespace TutorMatching.Tutor.Api.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("TutorMatching.Tutor.Api.Domain.Course", b =>
+                {
+                    b.HasOne("TutorMatching.Tutor.Api.Domain.TutorProfile", null)
+                        .WithMany()
+                        .HasForeignKey("TutorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("TutorMatching.Tutor.Api.Domain.CourseEnrollment", b =>
+                {
+                    b.HasOne("TutorMatching.Tutor.Api.Domain.Course", null)
+                        .WithMany("Enrollments")
+                        .HasForeignKey("CourseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("TutorMatching.Tutor.Api.Domain.CourseSession", b =>
+                {
+                    b.HasOne("TutorMatching.Tutor.Api.Domain.Course", null)
+                        .WithMany("Sessions")
+                        .HasForeignKey("CourseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("TutorMatching.Tutor.Api.Domain.EnrollmentNotice", b =>
+                {
+                    b.HasOne("TutorMatching.Tutor.Api.Domain.Course", null)
+                        .WithMany()
+                        .HasForeignKey("CourseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("TutorMatching.Tutor.Api.Domain.TutorSubject", b =>
                 {
                     b.HasOne("TutorMatching.Tutor.Api.Domain.Subject", null)
@@ -208,6 +367,13 @@ namespace TutorMatching.Tutor.Api.Infrastructure.Migrations
                         .HasForeignKey("TutorId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("TutorMatching.Tutor.Api.Domain.Course", b =>
+                {
+                    b.Navigation("Enrollments");
+
+                    b.Navigation("Sessions");
                 });
 
             modelBuilder.Entity("TutorMatching.Tutor.Api.Domain.TutorProfile", b =>

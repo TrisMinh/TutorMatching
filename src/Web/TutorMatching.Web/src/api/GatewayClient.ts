@@ -1,3 +1,4 @@
+import {resilientFetch} from './resilientFetch';
 export type AccountRole = 'Student' | 'Tutor';
 
 export type AuthSession = {
@@ -46,6 +47,7 @@ export type AuthUser = {
 };
 
 export type Subject = { id: string; code: string; name: string };
+export type Course = {id:string;title:string;tutorId:string;instructor:string;image:string;category:string;description:string;capacity:number;enrolled:number;sessions:Array<{id:string;startAtUtc:string;endAtUtc:string}>};
 export type TutorSubject = { subjectId: string; proficiencyLevel: string | number };
 export type AvailabilityWindow = { startAtUtc: string; endAtUtc: string };
 export type TutorProfile = {
@@ -75,6 +77,7 @@ export type AvailableTutorSearchResponse = {
   partial: boolean;
 };
 export type StudentProfile = {
+  avatarUrl?: string | null;
   id: string;
   userId: string;
   displayName: string;
@@ -98,6 +101,11 @@ export type Booking = {
 };
 export type BookingHold = { holdId: string; holdToken: string; expiresAtUtc: string };
 export type NotificationItem = {
+  courseId?: string;
+  className?: string;
+  startAtUtc?: string | null;
+  actorName?: string;
+  avatarUrl?: string | null;
   id: string;
   bookingId?: string | null;
   type: string;
@@ -108,6 +116,7 @@ export type NotificationItem = {
   readAtUtc?: string | null;
 };
 export type NotificationPage = {
+  partial?: boolean;
   items: NotificationItem[];
   page: number;
   pageSize: number;
@@ -181,6 +190,11 @@ export class GatewayClient {
     return this.request<Subject[]>('/api/v1/subjects', {}, false);
   }
 
+  listCourses() { return this.request<Course[]>('/api/v1/courses', {}, false); }
+  listMyCourses() { return this.request<Course[]>('/api/v1/courses/mine'); }
+  getCourse(id:string) { return this.request<Course>(`/api/v1/courses/${encodeURIComponent(id)}`,{},false); }
+  enrollCourse(id:string) { return this.request<{enrolled:boolean}>(`/api/v1/courses/${encodeURIComponent(id)}/enrollments`,{method:'POST'}); }
+
   searchTutors(subjectId?: string, page = 1, pageSize = 20) {
     const query = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
     if (subjectId) query.set('subjectId', subjectId);
@@ -201,12 +215,14 @@ export class GatewayClient {
   getTutor(id: string) {
     return this.request<TutorProfile>(`/api/v1/tutors/${id}`, {}, false);
   }
+  getMyTutorProfile() { return this.request<TutorProfile>('/api/v1/tutors/me'); }
 
   getStudentProfile() {
     return this.request<StudentProfile>('/api/v1/students/me');
   }
 
   saveStudentProfile(input: {
+    avatarUrl?: string;
     displayName: string;
     educationLevel: number;
     learningGoal: string;
@@ -254,6 +270,8 @@ export class GatewayClient {
   listBookings() {
     return this.request<Booking[]>('/api/v1/bookings');
   }
+  getBookingDetails(id:string) { return this.request<{booking:Booking;studentName:string|null;studentAvatarUrl?:string|null}>(`/api/v1/bookings/${encodeURIComponent(id)}`); }
+  getBookingStudentProfile(id:string) {return this.request<{id:string;displayName:string;avatarUrl?:string|null;educationLevel?:string;learningGoal?:string;timezone:string}>(`/api/v1/bookings/${encodeURIComponent(id)}/student-profile`);}
 
   createBookingHold(input: { tutorId: string; subjectId: string; startAtUtc: string }) {
     return this.request<BookingHold>('/api/v1/bookings/holds', {
@@ -274,13 +292,40 @@ export class GatewayClient {
     return this.request<void>(`/api/v1/bookings/${bookingId}?${query}`, { method: 'DELETE' });
   }
 
-  listNotifications(status?: 'Unread' | 'Read') {
+  async listNotifications(status?: 'Unread' | 'Read') {
     const query = new URLSearchParams({ page: '1', pageSize: '100' });
     if (status) query.set('status', status);
-    return this.request<NotificationPage>(`/api/v1/notifications?${query}`);
+    if(this.session.load()?.role!=='Tutor')return this.presentNotifications(await this.request<NotificationPage>(`/api/v1/notifications?${query}`));
+    const [existing,enrollmentSource]=await Promise.allSettled([this.request<NotificationPage>(`/api/v1/notifications?${query}`),this.request<NotificationItem[]>('/api/v1/courses/enrollment-notifications')]);
+    if(existing.status==='rejected'&&enrollmentSource.status==='rejected')throw existing.reason;
+    const page=existing.status==='fulfilled'?existing.value:{items:[],total:0,page:1,pageSize:100};
+    const notices=(enrollmentSource.status==='fulfilled'?enrollmentSource.value:[]).filter(n=>!status||n.status===status);
+    return this.presentNotifications({...page,partial:existing.status==='rejected'||enrollmentSource.status==='rejected',total:page.total+notices.length,items:[...page.items,...notices].sort((a,b)=>b.createdAtUtc.localeCompare(a.createdAtUtc)).slice(0,100)});
+  }
+
+  private async presentNotifications(page:NotificationPage):Promise<NotificationPage>{
+    if(!page.items.some(n=>n.bookingId))return page;
+    const metadata=await Promise.allSettled([this.listBookings(),this.listSubjects()]);
+    if(metadata[0].status==='rejected'||metadata[1].status==='rejected')return {...page,partial:true};
+    const bookings=metadata[0].value;const subjects=metadata[1].value;const tutor=this.session.load()?.role==='Tutor';
+    const relevant=bookings.filter(b=>page.items.some(n=>n.bookingId===b.id));
+    const people=new Map<string,{name?:string;avatar?:string|null}>();
+    const unique=[...new Map(relevant.map(b=>[tutor?b.studentId:b.tutorId,b])).values()];
+    let partial=!!page.partial;
+    for(let i=0;i<unique.length;i+=6)await Promise.all(unique.slice(i,i+6).map(async b=>{
+      try{if(tutor){const detail=await this.getBookingDetails(b.id);people.set(b.studentId,{name:detail.studentName??undefined,avatar:detail.studentAvatarUrl});}
+        else{const profile=await this.getTutor(b.tutorId);people.set(b.tutorId,{name:profile.displayName,avatar:profile.avatarUrl});}}
+      catch{partial=true;}
+    }));
+    return {...page,partial,items:page.items.map(item=>{
+      const booking=bookings.find(b=>b.id===item.bookingId);if(!booking)return item;
+      const person=people.get(tutor?booking.studentId:booking.tutorId);
+      return {...item,className:subjects.find(s=>s.id===booking.subjectId)?.name??'Private lesson',startAtUtc:booking.startAtUtc,actorName:person?.name,avatarUrl:person?.avatar};
+    })};
   }
 
   markNotificationRead(id: string) {
+    if(id.startsWith('enrollment:'))return this.request<void>(`/api/v1/courses/enrollment-notifications/${encodeURIComponent(id.slice(11))}/read`,{method:'PUT'});
     return this.request<void>(`/api/v1/notifications/${id}/read`, { method: 'PUT' });
   }
 
@@ -303,7 +348,12 @@ export class GatewayClient {
       ...(init.headers as Record<string, string> | undefined),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     };
-    return this.fetcher(`${this.baseUrl}${path}`, { ...init, headers });
+    const method=(init.method??'GET').toUpperCase();
+    const repeatable=method==='GET'||method==='HEAD'
+      ||(method==='POST'&&(path==='/api/v1/bookings'||/^\/api\/v1\/courses\/[^/]+\/enrollments$/.test(path)))
+      ||(method==='DELETE'&&/^\/api\/v1\/bookings\/[^/?]+\?/.test(path))
+      ||(method==='PUT'&&/\/read$/.test(path));
+    return resilientFetch(this.fetcher,`${this.baseUrl}${path}`, { ...init, headers },{repeatable});
   }
 
   private refreshSession() {

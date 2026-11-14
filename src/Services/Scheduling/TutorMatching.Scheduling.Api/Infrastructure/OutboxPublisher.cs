@@ -1,6 +1,7 @@
 using System.Text;
 using Microsoft.EntityFrameworkCore;
 using RabbitMQ.Client;
+using TutorMatching.BuildingBlocks.Security;
 
 namespace TutorMatching.Scheduling.Api.Infrastructure;
 
@@ -14,18 +15,21 @@ public sealed partial class OutboxPublisher(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        var failures=0;
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
                 await PublishBatchAsync(stoppingToken);
+                failures=0;
             }
             catch (Exception exception) when (!stoppingToken.IsCancellationRequested)
             {
                 LogCycleFailure(logger, exception);
+                failures=Math.Min(failures+1,4);
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(2), timeProvider, stoppingToken);
+            await Task.Delay(TimeSpan.FromSeconds(Math.Min(30,2*Math.Pow(2,failures))+Random.Shared.NextDouble()), timeProvider, stoppingToken);
         }
     }
 
@@ -37,6 +41,11 @@ public sealed partial class OutboxPublisher(
                 ?? "amqp://guest:guest@localhost:5672/"),
             AutomaticRecoveryEnabled = true,
         };
+        if(factory.Ssl.Enabled&&WorkloadTls.Enabled(configuration)){
+            factory.Ssl.ServerName="rabbitmq";
+            factory.Ssl.Certs=[WorkloadTls.ClientCertificate(configuration)];
+            factory.Ssl.CertificateValidationCallback=(_,certificate,_,errors)=>WorkloadTls.ValidateServer(certificate,errors,configuration,"rabbitmq");
+        }
         await using var connection = await factory.CreateConnectionAsync("scheduling-outbox", cancellationToken);
         await using var channel = await connection.CreateChannelAsync(
             new CreateChannelOptions(publisherConfirmationsEnabled: true, publisherConfirmationTrackingEnabled: true),
@@ -50,17 +59,11 @@ public sealed partial class OutboxPublisher(
 
         await using var scope = scopeFactory.CreateAsyncScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<SchedulingDbContext>();
-        var now = timeProvider.GetUtcNow();
-        var messages = await dbContext.OutboxMessages
-            .Where(message => message.PublishedAtUtc == null
-                && message.NextAttemptAtUtc <= now
-                && (message.LockedUntilUtc == null || message.LockedUntilUtc < now))
-            .OrderBy(message => message.OccurredAtUtc)
-            .Take(20)
-            .ToListAsync(cancellationToken);
-
-        foreach (var message in messages)
+        for(var index=0;index<20;index++)
         {
+            await using var transaction=await dbContext.Database.BeginTransactionAsync(cancellationToken);
+            var message=await ClaimNextAsync(dbContext,timeProvider.GetUtcNow(),cancellationToken);
+            if(message is null)return;
             try
             {
                 var properties = new BasicProperties
@@ -76,13 +79,19 @@ public sealed partial class OutboxPublisher(
                         ["traceparent"] = message.Traceparent ?? string.Empty,
                     },
                 };
+                using var publishTimeout=CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);publishTimeout.CancelAfter(TimeSpan.FromSeconds(5));
+                var payload=Encoding.UTF8.GetBytes(message.Payload);
+                if(configuration.GetValue<bool>("Security:Messaging:RequireSignature")){
+                    var proof=MessageAuthentication.Sign(configuration,message.Id.ToString(),message.EventType,message.EventVersion,message.RoutingKey,message.CorrelationId.ToString(),payload);
+                    properties.Headers!["x-key-id"]=proof.KeyId;properties.Headers["x-signed-at"]=proof.SignedAt;properties.Headers["x-signature"]=proof.Signature;
+                }
                 await channel.BasicPublishAsync(
                     ExchangeName,
                     message.RoutingKey,
                     mandatory: true,
                     properties,
-                    Encoding.UTF8.GetBytes(message.Payload),
-                    cancellationToken);
+                    payload,
+                    publishTimeout.Token);
                 message.MarkPublished(timeProvider.GetUtcNow());
             }
             catch (Exception exception) when (!cancellationToken.IsCancellationRequested)
@@ -92,7 +101,23 @@ public sealed partial class OutboxPublisher(
             }
 
             await dbContext.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            dbContext.ChangeTracker.Clear();
+            if(!channel.IsOpen)return;
         }
+    }
+    // The owning transaction is the lease: process death releases it without waiting for a TTL.
+    public static async Task<OutboxMessage?> ClaimNextAsync(SchedulingDbContext db,DateTimeOffset now,CancellationToken ct){
+        if(db.Database.CurrentTransaction is null)throw new InvalidOperationException("An outbox claim requires a transaction.");
+        var rows=await db.OutboxMessages.FromSqlInterpolated($"""
+            SELECT * FROM outbox_messages
+            WHERE published_at_utc IS NULL AND next_attempt_at_utc <= {now}
+              AND (locked_until_utc IS NULL OR locked_until_utc < {now})
+              AND attempt_count < 8
+            ORDER BY occurred_at_utc
+            LIMIT 1 FOR UPDATE SKIP LOCKED
+            """).ToListAsync(ct);
+        return rows.SingleOrDefault();
     }
 
     [LoggerMessage(EventId = 1001, Level = LogLevel.Error, Message = "Outbox publisher cycle failed.")]

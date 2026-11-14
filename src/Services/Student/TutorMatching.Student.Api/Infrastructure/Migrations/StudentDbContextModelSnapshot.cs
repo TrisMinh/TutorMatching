@@ -28,6 +28,11 @@ namespace TutorMatching.Student.Api.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<string>("AvatarUrl")
+                        .HasMaxLength(2000000)
+                        .HasColumnType("character varying(2000000)")
+                        .HasColumnName("avatar_url");
+
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at_utc");

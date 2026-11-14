@@ -17,6 +17,7 @@ coverage/
 *.user
 *.suo
 .env
+.security/
 .postman/
 postman/skills/
 

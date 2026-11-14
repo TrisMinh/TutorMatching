@@ -19,6 +19,7 @@ builder.Services.AddScoped(provider => new TokenService(
         ?? throw new InvalidOperationException("JWT configuration is missing."),
     provider.GetRequiredService<TimeProvider>()));
 
+builder.Services.AddDependencyReadiness("database",(sp,ct)=>sp.GetRequiredService<IdentityDbContext>().Database.CanConnectAsync(ct));
 var app = builder.Build();
 
 app.MapTutorMatchingDefaults();

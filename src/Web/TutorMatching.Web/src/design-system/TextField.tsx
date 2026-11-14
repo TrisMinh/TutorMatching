@@ -1,5 +1,6 @@
 import { useId, useState, type InputHTMLAttributes } from 'react';
 import './primitives.css';
+import { Select } from './Select';
 
 type TextFieldProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> & {
   label: string;
@@ -21,6 +22,14 @@ export function TextField({
   const messageId = `${inputId}-message`;
   const isPassword = type === 'password';
   const [passwordVisible, setPasswordVisible] = useState(false);
+  const selectOptions: Record<string,string[]> = {
+    'School level':['Primary','Grade 6–9','Grade 10','Grade 11','Grade 12','University','Adult'],
+    'Timezone':['Asia/Ho_Chi_Minh','Asia/Bangkok','Asia/Singapore','Asia/Tokyo','Europe/London','America/New_York'],
+    'Preferred language':['Vietnamese','English'],
+    'Languages':['Vietnamese','English','Vietnamese, English'],
+    'Repeat':['Every week','Every two weeks','Does not repeat'],
+  };
+  const choices=selectOptions[label];
   const effectiveType = isPassword && passwordVisible ? 'text' : type;
 
   return (
@@ -29,14 +38,14 @@ export function TextField({
         {label}
       </label>
       <div className="tm-field__control">
-        <input
+        {choices ? <Select className="tm-field__input" id={inputId} value={props.value} defaultValue={props.defaultValue} disabled={props.disabled} onChange={event=>props.onChange?.(event as unknown as React.ChangeEvent<HTMLInputElement>)}>{choices.map(choice=><option key={choice} value={choice}>{choice}</option>)}</Select> : <input
           aria-describedby={error || hint ? messageId : undefined}
           aria-invalid={error ? 'true' : undefined}
           className="tm-field__input"
           id={inputId}
           type={effectiveType}
           {...props}
-        />
+        />}
         {isPassword ? (
           <button
             aria-label={passwordVisible ? 'Hide password' : 'Show password'}

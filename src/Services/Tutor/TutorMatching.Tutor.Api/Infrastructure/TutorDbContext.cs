@@ -8,12 +8,35 @@ public sealed class TutorDbContext(DbContextOptions<TutorDbContext> options) : D
 {
     public DbSet<TutorProfile> TutorProfiles => Set<TutorProfile>();
     public DbSet<Subject> Subjects => Set<Subject>();
+    public DbSet<Course> Courses => Set<Course>();
+    public DbSet<CourseSession> CourseSessions => Set<CourseSession>();
+    public DbSet<CourseEnrollment> CourseEnrollments => Set<CourseEnrollment>();
+    public DbSet<EnrollmentNotice> EnrollmentNotices => Set<EnrollmentNotice>();
     public DbSet<TutorSubject> TutorSubjects => Set<TutorSubject>();
     public DbSet<AvailabilityWindow> AvailabilityWindows => Set<AvailabilityWindow>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasPostgresExtension("btree_gist");
+        var courses = modelBuilder.Entity<Course>();
+        courses.HasKey(c => c.Id);
+        courses.Property(c => c.Id).HasMaxLength(100);
+        courses.Property(c => c.Title).HasMaxLength(160);
+        courses.HasOne<TutorProfile>().WithMany().HasForeignKey(c => c.TutorId).OnDelete(DeleteBehavior.Restrict);
+        courses.HasMany(c => c.Sessions).WithOne().HasForeignKey(s => s.CourseId);
+        courses.HasMany(c => c.Enrollments).WithOne().HasForeignKey(e => e.CourseId);
+        courses.ToTable("courses", table => table.HasCheckConstraint("ck_course_capacity", "\"Capacity\" > 0"));
+        modelBuilder.Entity<CourseSession>().ToTable("course_sessions", table => table.HasCheckConstraint("ck_course_session_order", "\"EndAtUtc\" > \"StartAtUtc\""));
+        modelBuilder.Entity<CourseSession>().HasKey(s => s.Id);
+        modelBuilder.Entity<CourseEnrollment>().ToTable("course_enrollments");
+        modelBuilder.Entity<CourseEnrollment>().HasKey(e => new {e.CourseId,e.StudentUserId});
+        var notices=modelBuilder.Entity<EnrollmentNotice>();
+        notices.ToTable("enrollment_notices");notices.HasKey(n=>n.Id);
+        notices.Property(n=>n.CourseId).HasMaxLength(100);notices.Property(n=>n.StudentName).HasMaxLength(160);
+        notices.Property(n=>n.AvatarUrl).HasMaxLength(2000000);
+        notices.HasIndex(n=>new{n.CourseId,n.StudentUserId}).IsUnique();
+        notices.HasIndex(n=>new{n.TutorUserId,n.CreatedAtUtc});
+        notices.HasOne<Course>().WithMany().HasForeignKey(n=>n.CourseId).OnDelete(DeleteBehavior.Cascade);
 
         var profiles = modelBuilder.Entity<TutorProfile>();
         profiles.ToTable("tutor_profiles", table =>

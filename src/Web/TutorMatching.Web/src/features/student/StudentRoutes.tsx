@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { gatewayClient, type Booking, type NotificationItem, type StudentProfile, type Subject, type TutorProfile } from '../../api';
 import { useGatewayResource } from '../../api/useGatewayResource';
@@ -8,6 +8,14 @@ import { AppShell } from '../../shared/AppShell';
 import { MotionLink as Link, useMotionNavigate } from '../../shared/MotionLink';
 import { studentBookings, studentNotifications, studentTutors } from '../../shared/fixtures';
 import './student.css';
+import { calendarEvents } from '../../shared/calendarEvents';
+import { CourseIcon, TrendIcon } from '../../design-system/CourseIcon';
+import { CourseCalendar, calendarWeek, calendarDay, calendarZones } from './CourseCalendar';
+import { Toast } from '../../shared/Toast';
+import {NotificationDetails,notificationTitle} from '../../shared/notificationPresentation';
+import { BookingDetailsPanel } from '../../shared/BookingDetailsPanel';
+import { Select } from '../../design-system/Select';
+import { MyCourses } from '../../shared/MyCourses';
 
 const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -49,32 +57,113 @@ function formatBooking(booking: Booking, index: number): BookingCard {
 }
 
 export function StudentDashboard() {
+  return <TemplateDashboardReference />;
+}
+
+export function TemplateDashboardReference({mode='student',active='dashboard'}:{mode?:'student'|'tutor';active?:string}={}) {
+  const isTutor=mode==='tutor';
+  const prefix=isTutor?'/tutor':'/student';
+  const coursePath=(id:string)=>isTutor?`/tutor/courses?course=${encodeURIComponent(id)}`:`/student/courses/${id}`;
+  const bookingPath=(id:string)=>isTutor?`/tutor/lessons/${id}`:`/student/bookings/${id}`;
+  const loadTutor=useCallback(()=>isTutor?gatewayClient.getMyTutorProfile():Promise.resolve(null),[isTutor]);
+  const {data:tutorAccount}=useGatewayResource(loadTutor,null);
+  const [scheduleZone,setScheduleZone]=useState(()=>{const saved=localStorage.getItem('tutormatching.scheduleZone');return calendarZones.some(item=>item[0]===saved)?saved!:'Asia/Ho_Chi_Minh';});
+  const navigate=useMotionNavigate();
+  const loadCourses=useCallback(()=>isTutor?gatewayClient.listMyCourses():gatewayClient.listCourses(),[isTutor]);
+  const {data:realCourses,reload:reloadCatalog}=useGatewayResource(loadCourses,[]);
+  const loadPersonalSchedule=useCallback(async()=>{
+    const [courses,bookings,subjects]=await Promise.all([gatewayClient.listMyCourses(),gatewayClient.listBookings(),gatewayClient.listSubjects()]);
+    const lessons=bookings.filter(b=>b.status==='Confirmed').map(b=>({
+      id:`booking:${b.id}`,title:`${subjects.find(s=>s.id===b.subjectId)?.name??'Private'} lesson`,
+      tutorId:b.tutorId,instructor:'Private lesson',image:'/assets/figma/student-tutor-1.jpg',category:'Booking',description:'Confirmed private booking',capacity:1,enrolled:1,
+      sessions:[{id:b.id,startAtUtc:b.startAtUtc,endAtUtc:b.endAtUtc}],
+    }));
+    return [...courses,...lessons];
+  },[]);
+  const {data:personalSchedule,loading:scheduleLoading,error:scheduleError,reload:reloadSchedule}=useGatewayResource(loadPersonalSchedule,[]);
+  const enrolledSchedule=personalSchedule.filter(item=>!item.id.startsWith('booking:'));
+  function showScheduleItem(id:string){
+    const item=personalSchedule.find(c=>c.id===id);
+    const session=item?.sessions.find(s=>+new Date(s.endAtUtc)>Date.now())??item?.sessions[0];
+    if(!session)return;
+    const key=new Intl.DateTimeFormat('en-CA',{timeZone:scheduleZone,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(session.startAtUtc));
+    setWeekOffset(Math.floor((+calendarDay(key,scheduleZone)-+calendarWeek(personalSchedule,0,scheduleZone))/(7*86400000)));
+    setSelectedDate(key);setMonthShift(0);
+  }
   const loadBookings = useCallback(() => gatewayClient.listBookings(), []);
-  const { data: remoteBookings } = useGatewayResource<Booking[] | null>(loadBookings, null);
+  const { data: remoteBookings, loading, error, reload } = useGatewayResource<Booking[] | null>(loadBookings, null);
+  useEffect(()=>{if(!isTutor)return;const refresh=()=>{void reloadSchedule();void reload();void reloadCatalog();};window.addEventListener('focus',refresh);return()=>window.removeEventListener('focus',refresh);},[isTutor,reloadSchedule,reload,reloadCatalog]);
   const [weekOffset, setWeekOffset] = useState(0);
   const [courseFilter, setCourseFilter] = useState('All Course');
-  const [selectedDay, setSelectedDay] = useState(23);
-  const weekLabel = weekOffset === 0 ? '02 – 08 March' : weekOffset < 0 ? '24 February – 01 March' : '09 – 15 March';
-  const upcomingCount = remoteBookings?.filter((booking) => booking.status !== 'Cancelled').length ?? 3;
+  const [courseSize,setCourseSize]=useState<'small'|'medium'|'large'>(()=>{const saved=window.localStorage.getItem('tutormatching.courseView');return saved==='small'||saved==='large'?saved:'medium';});
+  const [selectedDate,setSelectedDate]=useState('');
+  const [monthShift,setMonthShift]=useState(0);
+  const [selectedEvent, setSelectedEvent] = useState('');
+  const upcomingCourseEvents=isTutor?realCourses.map(c=>({...c,sessions:[...c.sessions].filter(s=>+new Date(s.endAtUtc)>Date.now()).sort((a,b)=>a.startAtUtc.localeCompare(b.startAtUtc))})).filter(c=>c.sessions.length).sort((a,b)=>a.sessions[0].startAtUtc.localeCompare(b.sessions[0].startAtUtc)).slice(0,3):realCourses.filter(course=>['typography','figma-ui-design'].includes(course.id));
+  const mockEvent = calendarEvents.find(event=>event.title===selectedEvent);
+  const realEvent = realCourses.find(course=>course.title===selectedEvent);
+  const firstSession = realEvent?.sessions[0];
+  const eventDetails = realEvent ? {title:realEvent.title,image:realEvent.image.replace('/assets/figma/',''),description:realEvent.description,instructor:realEvent.instructor,day:firstSession?new Date(firstSession.startAtUtc).toLocaleDateString('en-GB',{timeZone:'Asia/Ho_Chi_Minh'}):'',time:firstSession?new Date(firstSession.startAtUtc).toLocaleTimeString('en-GB',{timeZone:'Asia/Ho_Chi_Minh',hour:'2-digit',minute:'2-digit'}):'',format:realEvent.category,participants:[`${realEvent.enrolled} / ${realEvent.capacity} enrolled`]} : mockEvent;
+  const weekStart=calendarWeek(personalSchedule,weekOffset,scheduleZone);
+  const weekHasSessions=personalSchedule.some(c=>c.sessions.some(s=>+new Date(s.startAtUtc)>=+weekStart&&+new Date(s.startAtUtc)<+weekStart+7*86400000));
+  const weekLabel = `${weekStart.toLocaleDateString('en-GB',{timeZone:scheduleZone,day:'numeric',month:'short'})} – ${new Date(+weekStart+6*86400000).toLocaleDateString('en-GB',{timeZone:scheduleZone,day:'numeric',month:'short',year:'numeric'})}`;
+  const upcomingBookings = (remoteBookings ?? []).filter((booking) => booking.status !== 'Cancelled' && new Date(booking.endAtUtc).getTime() > Date.now());
+  const upcomingCount = upcomingBookings.length;
   const courseTabs = ['All Course', 'One by One', 'Webinar', 'Personal Coaching', 'Workshop'];
-  const miniCalendarDays = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 1, 2, 3, 4, 5];
+  const localWeek=selectedDate?new Date(selectedDate+'T12:00:00Z'):new Date(new Intl.DateTimeFormat('en-CA',{timeZone:scheduleZone,year:'numeric',month:'2-digit',day:'2-digit'}).format(weekStart)+'T12:00:00Z');
+  const monthStart=new Date(Date.UTC(localWeek.getUTCFullYear(),localWeek.getUTCMonth()+monthShift,1));
+  const gridStart=new Date(+monthStart-((monthStart.getUTCDay()+6)%7)*86400000);
+  const miniCalendarDays=Array.from({length:42},(_,index)=>new Date(+gridStart+index*86400000));
+  const miniDaysRef=useRef<HTMLDivElement>(null);
+  const previousMonth=useRef(+monthStart);
+  const coursePanelRef=useRef<HTMLDivElement>(null);
+  const courseRects=useRef(new Map<string,DOMRect>());
+  useLayoutEffect(()=>{
+    const direction=Math.sign(+monthStart-previousMonth.current);
+    previousMonth.current=+monthStart;
+    if(!direction||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+    const animation=miniDaysRef.current?.animate([{transform:`translateX(${direction*22}px)`,opacity:0},{transform:'translateX(0)',opacity:1}],{duration:240,easing:'cubic-bezier(.22,1,.36,1)'});
+    return()=>animation?.cancel();
+  },[+monthStart]);
+  function changeCourseSize(size:'small'|'medium'|'large'){
+    if(size===courseSize)return;
+    courseRects.current=new Map(Array.from(coursePanelRef.current?.querySelectorAll('a')??[],element=>[element.getAttribute('href')!,element.getBoundingClientRect()]));
+    setCourseSize(size);localStorage.setItem('tutormatching.courseView',size);
+  }
+  useLayoutEffect(()=>{
+    if(matchMedia('(prefers-reduced-motion: reduce)').matches){courseRects.current.clear();return;}
+    const animations=Array.from(coursePanelRef.current?.querySelectorAll('a')??[],element=>{
+      const before=courseRects.current.get(element.getAttribute('href')!);
+      if(!before)return;
+      const after=element.getBoundingClientRect();
+      return element.animate([{transform:`translate(${before.left-after.left}px,${before.top-after.top}px) scale(${before.width/after.width},${before.height/after.height})`,opacity:.7},{transform:'none',opacity:1}],{duration:260,easing:'cubic-bezier(.22,1,.36,1)'});
+    });
+    courseRects.current.clear();
+    return()=>animations.forEach(animation=>animation?.cancel());
+  },[courseSize]);
+  function selectCalendarDate(date:Date){
+    const key=date.toISOString().slice(0,10);
+    const localMidnight=calendarDay(key,scheduleZone);
+    setWeekOffset(Math.floor((+localMidnight-+calendarWeek(personalSchedule,0,scheduleZone))/(7*86400000)));
+    setSelectedDate(key);setMonthShift(0);
+  }
 
   return (
-    <AppShell active="dashboard" contentClassName="student-dashboard" title="Good morning, Minh">
-      <section className="dashboard-compact">
+    <AppShell active={active} mode={mode} contentClassName="student-dashboard" title={isTutor?(active==='schedule'?'Schedule':`Good morning, ${tutorAccount?.displayName??'Tutor'}`):'Good morning, Minh'}>
+      <section className="dashboard-compact" hidden>
         <div className="dashboard-stats">
           {[['Upcoming', String(upcomingCount)], ['Hours learned', '24'], ['Tutors', '5']].map(([label, value]) => (
             <article key={label}><span>{label}</span><strong>{value}</strong></article>
           ))}
         </div>
         <div className="dashboard-week">
-          <div className="dashboard-week__header"><h2>This week</h2><Link to="/student/bookings" viewTransition>View bookings</Link></div>
+          <div className="dashboard-week__header"><h2>This week</h2><Link to={isTutor?'/tutor/requests':'/student/bookings'} viewTransition>View bookings</Link></div>
+          {loading ? <p className="dashboard-feedback" role="status">Loading your schedule…</p> : error ? <div className="dashboard-feedback" role="alert"><p>Unable to load your schedule.</p><Button onClick={() => void reload()} variant="secondary">Try again</Button></div> : upcomingCount === 0 ? <div className="dashboard-feedback"><h3>No upcoming lessons</h3><p>Find a tutor and book a time that works for you.</p><Link className="student-primary-link" to="/student/find-tutors">Find a tutor</Link></div> : null}
           <div className="dashboard-week__days">
             {weekdays.map((day, dayIndex) => (
               <div className="dashboard-week__day" key={day}>
                 <span>{day}</span>
-                <div className={dayIndex === 1 ? 'has-lesson' : ''}>{dayIndex === 1 ? <><strong>Math</strong><small>10:30</small></> : null}</div>
-                <div />
+                {upcomingBookings.filter(booking => new Intl.DateTimeFormat('en', { weekday: 'short', timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date(booking.startAtUtc)) === weekdays[dayIndex]).map(booking => <Link className="has-lesson" key={booking.id} to={bookingPath(booking.id)}><strong>Lesson</strong><small>{new Date(booking.startAtUtc).toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit',timeZone:'Asia/Ho_Chi_Minh'})}</small></Link>)}
               </div>
             ))}
           </div>
@@ -82,36 +171,37 @@ export function StudentDashboard() {
       </section>
 
       <section className="dashboard-template" aria-label="My schedule">
+        {eventDetails ? <div className="schedule-event-overlay" onClick={() => setSelectedEvent('')}><section aria-label="Event details" aria-modal="true" role="dialog" onClick={event => event.stopPropagation()}><Button onClick={() => setSelectedEvent('')} variant="secondary">Close</Button><img className="calendar-detail-photo" alt="" src={`/assets/figma/${eventDetails.image}`}/><h2>{eventDetails.title}</h2><p>{eventDetails.description}</p><DetailRows rows={[["Instructor",eventDetails.instructor],["Date",eventDetails.day],["Time",`${eventDetails.time} (GMT+07)`],["Format",eventDetails.format],["Participants",eventDetails.participants.join(', ')]]}/></section></div> : null}
         <div className="dashboard-legacy">
-          <div className="legacy-schedule-head"><h2>My Schedule</h2><span>(GMT +06:00) Public Time⌄</span></div>
+          <div className="legacy-schedule-head"><h2>{isTutor?'Teaching Schedule':'My Schedule'}</h2></div>
           <div className="legacy-date">
             <span>{weekLabel}</span>
-            <button aria-label="Previous week" onClick={() => setWeekOffset((value) => value - 1)} type="button">‹</button>
-            <button aria-label="Next week" onClick={() => setWeekOffset((value) => value + 1)} type="button">›</button>
+            <button aria-label="Previous week" onClick={() => {setWeekOffset((value) => value - 1);setSelectedDate('');setMonthShift(0);}} type="button">‹</button>
+            <button aria-label="Next week" onClick={() => {setWeekOffset((value) => value + 1);setSelectedDate('');setMonthShift(0);}} type="button">›</button>
+            <Select className="schedule-timezone" aria-label="Schedule timezone" value={scheduleZone} onChange={event=>{setScheduleZone(event.target.value);localStorage.setItem('tutormatching.scheduleZone',event.target.value);setSelectedDate('');setMonthShift(0);}}>{calendarZones.map(([value,label])=><option key={value} value={value}>{label}</option>)}</Select>
           </div>
-          <div className="legacy-calendar">
-            <div className="legacy-calendar__days">{[['Mon','02'],['Tues','03'],['Wed','04'],['Thu','05'],['Fri','06'],['Sat','07']].map(([day,date])=><span key={day}><strong>{day}</strong><small>{date}</small></span>)}</div>
-            <div className="legacy-calendar__times">{['09:00','10:00','11:00','12:00','13:00','14:00','15:00'].map(time=><span key={time}>{time}</span>)}</div>
-            <Link className="legacy-event legacy-event--research" to="/student/bookings" viewTransition><span className="legacy-event__thumb"><img alt="" src="/assets/figma/dashboard-research.png"/></span><span className="legacy-event__copy"><strong>UX Research Class</strong><small>Mon – Thu</small></span><span className="legacy-event__people"><span className="legacy-avatars"><img alt="" src="/assets/figma/dashboard-avatar-1.png"/><img alt="" src="/assets/figma/dashboard-avatar-2.png"/><img alt="" src="/assets/figma/dashboard-avatar-3.png"/></span><small>10:44 am</small></span></Link>
-            <Link className="legacy-event legacy-event--app" to="/student/bookings" viewTransition><span className="legacy-event__thumb"><img alt="" src="/assets/figma/dashboard-app.png"/></span><span className="legacy-event__copy"><strong>App Development Course</strong><small>Mon – Thu</small></span><span className="legacy-event__people"><span className="legacy-avatars"><img alt="" src="/assets/figma/dashboard-avatar-2.png"/><img alt="" src="/assets/figma/dashboard-avatar-3.png"/></span><small>10:44 am</small></span></Link>
-            <Link className="legacy-event legacy-event--figma" to="/student/bookings" viewTransition><span className="legacy-event__thumb"><img alt="" src="/assets/figma/dashboard-figma.png"/></span><span className="legacy-event__copy"><strong>Figma UI/UX Workshop</strong><small>Mon – Thu</small></span><span className="legacy-event__people"><span className="legacy-avatars"><img alt="" src="/assets/figma/dashboard-avatar-2.png"/><img alt="" src="/assets/figma/dashboard-avatar-3.png"/></span><small>10:44 am</small></span></Link>
-            <Link className="legacy-event legacy-event--webinar" to="/student/bookings" viewTransition><strong>Webinar</strong><span className="legacy-zoom"><img alt="" src="/assets/figma/dashboard-zoom.svg"/> Zoom</span><small>Mon – Thu<br/>10:44 am</small></Link>
-          </div>
+          <div className="schedule-legend"><span>● {isTutor?'Courses I teach':'Enrolled courses'}</span><span>● Confirmed bookings</span></div>
+          {enrolledSchedule.length>0&&<div className="schedule-course-jump"><label htmlFor="enrolled-course-jump">{isTutor?'Courses I teach':'Enrolled courses'} ({enrolledSchedule.length})</label><Select id="enrolled-course-jump" value="" onChange={e=>showScheduleItem(e.target.value)}><option value="">{isTutor?'Go to a teaching session…':'Go to a course’s next session…'}</option>{enrolledSchedule.map(course=><option key={course.id} value={course.id}>{course.title}</option>)}</Select><Link to={`${prefix}/courses`}>View all</Link></div>}
+          {scheduleLoading?<p role="status">Loading your personal schedule…</p>:scheduleError?<div role="alert">Unable to load your personal schedule. <Button onClick={()=>void reloadSchedule()}>Try again</Button></div>:null}
+          <CourseCalendar courses={personalSchedule} offset={weekOffset} zone={scheduleZone} selectedDate={selectedDate} onOpen={id=>navigate(id.startsWith('booking:')?bookingPath(id.slice(8)):coursePath(id),{viewTransition:true})}/>
+          {!scheduleLoading&&!scheduleError&&personalSchedule.length>0&&!weekHasSessions&&<p role="status">No sessions this week. Your enrolled courses are still saved; select a course above to jump to its next session.</p>}
+          {!scheduleLoading&&!scheduleError&&!personalSchedule.length?<p>No enrolled courses or confirmed bookings yet. Browse the courses below to get started.</p>:null}
           <div className="legacy-tabs" role="tablist" aria-label="Course type">{courseTabs.map(tab=><button aria-selected={courseFilter===tab} className={courseFilter===tab?'is-active':''} key={tab} onClick={()=>setCourseFilter(tab)} role="tab" type="button">{tab}</button>)}</div>
-          <div className="legacy-courses">
-            <Link to="/student/find-tutors" viewTransition><img src="/assets/figma/dashboard-course-camera.png" alt=""/><strong>Portrait Photography Masterclass</strong><span>Jane Copper</span></Link>
-            <Link to="/student/find-tutors" viewTransition><img src="/assets/figma/dashboard-course-ui.png" alt=""/><strong>User Interface Design Masterclass</strong><span>Jane Copper</span></Link>
+          <div className="course-view-toolbar"><span>Course view</span><div role="group" aria-label="Course card size">{(['small','medium','large'] as const).map((size,index)=><button aria-label={`${size} cards`} title={`${size[0].toUpperCase()+size.slice(1)} cards`} aria-pressed={courseSize===size} key={size} onClick={()=>changeCourseSize(size)} type="button"><svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor" aria-hidden="true">{Array.from({length:3-index},(_,column)=>Array.from({length:2},(_,row)=><rect key={`${column}-${row}`} x={1+column*(16/(3-index))} y={2+row*8} width={16/(3-index)-2} height="6" rx="1"/>))}</svg></button>)}</div></div>
+          <div ref={coursePanelRef} className={`legacy-courses course-tab-panel course-size-${courseSize}`} key={courseFilter} role="tabpanel" aria-label={courseFilter}>
+            {realCourses.filter(course=>courseFilter==='All Course'||course.category===courseFilter).map(course=><Link key={course.id} to={coursePath(course.id)} viewTransition><img src={course.image} alt=""/><strong>{course.title}</strong><span>{course.instructor}</span></Link>)}
           </div>
+          {upcomingBookings.length ? <section className="dashboard-additional-bookings"><h2>Your booked lessons</h2><div className="legacy-courses">{upcomingBookings.map((booking,index)=><Link key={booking.id} to={bookingPath(booking.id)} viewTransition><img alt="" src={`/assets/figma/student-tutor-${index%3+1}.jpg`}/><strong>Online lesson</strong><span>{new Date(booking.startAtUtc).toLocaleString('en-GB',{timeZone:'Asia/Ho_Chi_Minh',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span></Link>)}</div></section> : null}
         </div>
 
         <aside className="dashboard-rail" aria-label="Calendar and events">
           <section className="dashboard-mini-calendar">
-            <div><h2>February 2021</h2><span aria-hidden="true">‹　›</span></div>
+            <div><h2>{monthStart.toLocaleDateString('en-GB',{timeZone:'UTC',month:'long',year:'numeric'})}</h2><span className="mini-month-actions"><button aria-label="Previous month" onClick={()=>setMonthShift(value=>value-1)}>‹</button><button aria-label="Next month" onClick={()=>setMonthShift(value=>value+1)}>›</button></span></div>
             <div className="dashboard-mini-calendar__weekdays">{['Mo','Tu','We','Th','Fr','Sa','Su'].map(day=><strong key={day}>{day}</strong>)}</div>
-            <div className="dashboard-mini-calendar__days">{miniCalendarDays.map((day,index)=><button aria-pressed={selectedDay===day && index<29} className={`${index>28?'is-muted ':''}${selectedDay===day&&index<29?'is-selected':''}`} key={`${day}-${index}`} onClick={()=>setSelectedDay(day)} type="button">{day}</button>)}</div>
+            <div ref={miniDaysRef} className="dashboard-mini-calendar__days">{miniCalendarDays.map(day=>{const key=day.toISOString().slice(0,10);return <button aria-label={key} aria-pressed={selectedDate===key} className={`${day.getUTCMonth()!==monthStart.getUTCMonth()?'is-muted ':''}${selectedDate===key?'is-selected':''}`} key={key} onClick={()=>selectCalendarDate(day)} type="button">{day.getUTCDate()}</button>;})}</div>
           </section>
-          <section className="dashboard-rail-section"><h2>Upcoming Events</h2><Link to="/student/bookings" viewTransition><span className="dashboard-event-icon is-yellow">✎</span><span><strong>Typography in UX/UI</strong><small>• Design　• 10:00 am</small></span><b>••</b></Link><Link to="/student/bookings" viewTransition><span className="dashboard-event-icon is-rainbow">F</span><span><strong>Figma UI UX Design</strong><small>• Design　• 10:00 am</small></span><b>••</b></Link></section>
-          <section className="dashboard-rail-section dashboard-top-courses"><h2>Top Performing Courses</h2>{['CSS for Designers','3D Design Foundations','Design Composition','Color Psychology'].map((course,index)=><Link key={course} to="/student/find-tutors" viewTransition><span className={`dashboard-course-icon course-${index+1}`}>◆</span><span><strong>{course}</strong><small>◉ uxcel</small></span><i aria-hidden="true">⌁</i></Link>)}</section>
+          <section className="dashboard-rail-section"><h2>Upcoming Events</h2>{upcomingCourseEvents.map((course)=><Link key={course.id} to={coursePath(course.id)} viewTransition><span className={`dashboard-event-icon ${course.id==='figma-ui-design'?'is-figma':'is-yellow'}`}><CourseIcon kind={course.id==='figma-ui-design'?1:0}/></span><span><strong>{course.title}</strong><small>{course.sessions[0] ? new Date(course.sessions[0].startAtUtc).toLocaleString('en-GB',{timeZone:'Asia/Ho_Chi_Minh',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : 'Schedule pending'}</small></span><svg className="rail-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m6 4 4 4-4 4" stroke="currentColor" strokeWidth="1.5"/></svg></Link>)}</section>
+          <section className="dashboard-rail-section dashboard-top-courses"><h2>{isTutor?"Your Courses":"Top Performing Courses"}</h2>{(isTutor?[...realCourses].sort((a,b)=>b.enrolled-a.enrolled).slice(0,4):["css-designers","design-foundations","composition","color"].map(id=>realCourses.find(c=>c.id===id)).filter((c):c is NonNullable<typeof c>=>!!c)).map((course,index)=><Link key={course.id} to={coursePath(course.id)} viewTransition><span className={`dashboard-course-icon course-${index+1}`}><CourseIcon kind={index+2}/></span><span><strong>{course.title}</strong><small>{isTutor?`${course.enrolled} / ${course.capacity} enrolled`:course.instructor}</small></span><i><TrendIcon/></i></Link>)}</section>
         </aside>
       </section>
     </AppShell>
@@ -120,6 +210,7 @@ export function StudentDashboard() {
 
 export function CompleteProfileScreen() {
   const navigate = useMotionNavigate();
+  const [schoolLevel,setSchoolLevel]=useState('Grade 10');
   const [displayName, setDisplayName] = useState(() => window.sessionStorage.getItem('tutormatching.registration.name') || 'Minh Nguyen');
   const [learningGoal, setLearningGoal] = useState('Improve exam results');
   const [saving, setSaving] = useState(false);
@@ -131,7 +222,7 @@ export function CompleteProfileScreen() {
     try {
       await gatewayClient.saveStudentProfile({
         displayName: displayName.trim(),
-        educationLevel: 2,
+        educationLevel: schoolLevel==='Primary'?0:schoolLevel==='Grade 6–9'?1:schoolLevel==='University'?3:schoolLevel==='Adult'?4:2,
         learningGoal: learningGoal.trim(),
         timezone: 'Asia/Ho_Chi_Minh',
       });
@@ -155,7 +246,7 @@ export function CompleteProfileScreen() {
       <section className="student-card learning-profile">
         <h3>Learning profile</h3>
         <TextField label="Display name" onChange={(event) => setDisplayName(event.target.value)} value={displayName} />
-        <TextField defaultValue="Grade 10" label="School level" />
+        <TextField value={schoolLevel} onChange={event=>setSchoolLevel(event.target.value)} label="School level" />
         <TextField defaultValue="Mathematics, Physics" label="Subjects" />
         <TextField label="Learning goal" onChange={(event) => setLearningGoal(event.target.value)} value={learningGoal} />
         <TextField defaultValue="Vietnamese" label="Preferred language" />
@@ -168,13 +259,16 @@ export function CompleteProfileScreen() {
 }
 
 export function FindTutorsScreen() {
+  const [gridSize,setGridSize]=useState<'small'|'medium'|'large'>(()=>{const saved=localStorage.getItem('tutormatching.tutorGrid');return saved==='small'||saved==='large'?saved:'medium';});
   const [query, setQuery] = useState('');
   const [submittedQuery, setSubmittedQuery] = useState('');
   const [availableToday, setAvailableToday] = useState(false);
+  const [subjectFilter,setSubjectFilter]=useState('');
+  const [sortOrder,setSortOrder]=useState('relevance');
   const [savedTutors, setSavedTutors] = useState<string[]>([]);
   const loadSubjects = useCallback(() => gatewayClient.listSubjects(), []);
   const { data: subjects } = useGatewayResource(loadSubjects, null);
-  const mathematics = subjects?.find((subject) => subject.name === 'Mathematics');
+  const mathematics = subjects?.find((subject) => subject.id === subjectFilter);
   const loadTutors = useCallback(async () => {
     if (!availableToday || !mathematics) return gatewayClient.searchTutors(mathematics?.id, 1, 100);
     const date = new Intl.DateTimeFormat('en-CA', {
@@ -201,20 +295,22 @@ export function FindTutorsScreen() {
   );
   const tutors = useMemo(() => {
     const normalized = submittedQuery.trim().toLowerCase();
-    if (!normalized) return availableTutors;
-    return availableTutors.filter((tutor) => `${tutor.name} ${tutor.subjects}`.toLowerCase().includes(normalized));
-  }, [availableTutors, submittedQuery]);
+    const results=availableTutors.filter((tutor) => !normalized||`${tutor.name} ${tutor.subjects}`.toLowerCase().includes(normalized));
+    return sortOrder==='name'?results.sort((a,b)=>a.name.localeCompare(b.name)):results;
+  }, [availableTutors, submittedQuery,sortOrder]);
 
   return (
     <AppShell active="find" contentClassName="find-tutors" mobileTitle="Find tutors" title="Find the right tutor">
+      <section className="tutor-search-toolbar" aria-label="Search and filters">
       <form className="tutor-search" onSubmit={(event) => { event.preventDefault(); setSubmittedQuery(query); }}>
         <input onChange={(event) => setQuery(event.target.value)} placeholder="Search by subject, tutor name, or keyword" value={query} />
         <Button size="large" type="submit">Search</Button>
       </form>
-      <div className="tutor-filters">{['Mathematics', 'Grade 10', 'Online', 'Under 200k', 'Available today'].map((filter, index) => <button aria-pressed={index === 0 || (filter === 'Available today' && availableToday)} className={index === 0 || (filter === 'Available today' && availableToday) ? 'is-active' : ''} key={filter} onClick={() => { if (filter === 'Available today') setAvailableToday((value) => !value); }} type="button">{filter}</button>)}</div>
-      <div className="tutor-results-title"><h2>Tutors matching your search</h2><span>Sort by relevance</span></div>
+      <div className="tutor-filter-bar"><label>Subject<Select value={subjectFilter} onChange={event=>{setSubjectFilter(event.target.value);setAvailableToday(false);}}><option value="">All subjects</option>{subjects?.map(subject=><option key={subject.id} value={subject.id}>{subject.name}</option>)}</Select></label><label>Availability<Select disabled={!subjectFilter} value={availableToday?'today':'any'} onChange={event=>setAvailableToday(event.target.value==='today')}><option value="any">Any time</option><option value="today">Available today</option></Select></label><label>Sort by<Select value={sortOrder} onChange={event=>setSortOrder(event.target.value)}><option value="relevance">Relevance</option><option value="name">Name A–Z</option></Select></label><Button variant="secondary" onClick={()=>{setSubjectFilter('');setAvailableToday(false);setSortOrder('relevance');setQuery('');setSubmittedQuery('');}}>Clear filters</Button></div>
+      </section>
+      <div className="tutor-results-title"><h2>Tutors matching your search</h2><div className="course-view-toolbar tutor-view-toolbar"><span>Grid view</span><div role="group" aria-label="Tutor grid size">{(['small','medium','large'] as const).map((size,index)=><button key={size} type="button" aria-label={`${size} tutor cards`} aria-pressed={gridSize===size} title={`${size} cards`} onClick={()=>{setGridSize(size);localStorage.setItem('tutormatching.tutorGrid',size);}}><svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor" aria-hidden="true">{Array.from({length:3-index},(_,col)=>Array.from({length:2},(_,row)=><rect key={`${col}-${row}`} x={1+col*(16/(3-index))} y={2+row*8} width={16/(3-index)-2} height="6" rx="1"/>))}</svg></button>)}</div></div></div>
       <span aria-live="polite" className="sr-only">{loading ? 'Loading tutors' : `${tutors.length} tutors found`}</span>
-      <div className="tutor-grid">
+      <div className={`tutor-grid tutor-grid--${gridSize}`} key={gridSize}>
         {tutors.map((tutor) => (
           <article className="tutor-card" key={tutor.id}>
             <button aria-label={`${savedTutors.includes(tutor.id) ? 'Remove' : 'Save'} ${tutor.shortName}`} aria-pressed={savedTutors.includes(tutor.id)} className={`tutor-card__favorite ${savedTutors.includes(tutor.id) ? 'is-saved' : ''}`} onClick={() => setSavedTutors((current) => current.includes(tutor.id) ? current.filter((id) => id !== tutor.id) : [...current, tutor.id])} type="button">{savedTutors.includes(tutor.id) ? '♥' : '♡'}</button>
@@ -233,6 +329,8 @@ export function FindTutorsScreen() {
 }
 
 export function TutorProfileScreen() {
+  const loadCourses=useCallback(()=>gatewayClient.listCourses(),[]);
+  const {data:catalog}=useGatewayResource(loadCourses,[]);
   const { tutorId = 'minh-anh' } = useParams();
   const loadTutor = useCallback(
     () => uuidPattern.test(tutorId) ? gatewayClient.getTutor(tutorId) : Promise.reject(new Error('Figma fixture tutor')),
@@ -262,6 +360,7 @@ export function TutorProfileScreen() {
         <section className="student-card tutor-availability"><h2>Next availability</h2>{['Today • 18:00','Tue • 09:00','Tue • 15:30','Wed • 19:00'].map((time)=><button aria-pressed={selectedAvailability===time} className={selectedAvailability===time?'is-active':''} key={time} onClick={()=>setSelectedAvailability(time)} type="button">{time}</button>)}</section>
       </div>
       <Link className="student-primary-link tutor-profile__mobile-book" to={bookingTarget} viewTransition>Book a lesson</Link>
+      {tutor&&<section className="student-card"><h2>Courses by {displayName}</h2><div className="my-course-grid">{catalog.filter(c=>c.tutorId===tutor.id).map(c=><Link className="my-course-card" key={c.id} to={`/student/courses/${c.id}`} viewTransition><img src={c.image} alt=""/><div><h3>{c.title}</h3><p>{c.category} · {c.sessions.length} sessions</p><small>{c.enrolled} / {c.capacity} enrolled</small></div></Link>)}</div>{!catalog.some(c=>c.tutorId===tutor.id)&&<p>No published courses from this tutor yet.</p>}</section>}
     </AppShell>
   );
 }
@@ -359,8 +458,8 @@ export function BookingsScreen() {
   const visibleBookings = bookings.filter((booking) => activeTab === 'Upcoming' ? !['Completed','Cancelled'].includes(booking.status) : booking.status === activeTab);
   return (
     <AppShell active="bookings" contentClassName="bookings" title="My bookings">
-      <div className="booking-tabs" role="tablist">{['Upcoming','Completed','Cancelled'].map(tab=><button aria-selected={activeTab===tab} className={activeTab===tab?'is-active':''} key={tab} onClick={()=>setActiveTab(tab)} role="tab" type="button">{tab}</button>)}</div>
-      <div className="booking-list">{visibleBookings.length ? visibleBookings.map((booking)=><article className="student-card booking-item" key={booking.id ?? `${booking.day}-${booking.title}`}><div className="booking-date"><strong>{booking.day}</strong><span>{booking.month}</span></div><div className="booking-item__content"><h2>{booking.title}</h2><p>{booking.time} • {booking.format}</p></div><span className="booking-status">{booking.status}</span><Link className="student-primary-link" to={booking.id ? `/student/bookings/${booking.id}` : '/student/bookings/TM-20261118-1042'} viewTransition>{booking.action}</Link></article>) : <p className="booking-empty">No {activeTab.toLowerCase()} bookings.</p>}</div>
+      <div className="booking-tabs" role="tablist">{['Upcoming','Completed','Cancelled'].map(tab=><button data-status={tab} aria-selected={activeTab===tab} className={activeTab===tab?'is-active':''} key={tab} onClick={()=>setActiveTab(tab)} role="tab" type="button">{tab}</button>)}</div>
+      <div className="booking-list">{visibleBookings.length ? visibleBookings.map((booking)=><article className="student-card booking-item" key={booking.id ?? `${booking.day}-${booking.title}`}><div className="booking-date"><strong>{booking.day}</strong><span>{booking.month}</span></div><div className="booking-item__content"><h2>{booking.title}</h2><p>{booking.time} • {booking.format}</p></div><span className="booking-status" data-status={booking.status}>{booking.status}</span><Link className="student-primary-link" to={booking.id ? `/student/bookings/${booking.id}` : '/student/bookings/TM-20261118-1042'} viewTransition>{booking.action}</Link></article>) : <p className="booking-empty">No {activeTab.toLowerCase()} bookings.</p>}</div>
     </AppShell>
   );
 }
@@ -403,7 +502,9 @@ export function BookingDetailsScreen() {
   }
   return (
     <AppShell active="bookings" contentClassName="booking-details" title="Booking details">
-      <div className="booking-detail-layout"><section className="student-card booking-detail-card"><h2>{title}</h2><span className="booking-status">{booking?.status ?? 'Confirmed'}</span><DetailRows rows={rows}/></section><aside><Button fullWidth onClick={()=>setActionMessage('The meeting room opens 10 minutes before the lesson.')} size="large">Join lesson</Button><Button fullWidth onClick={()=>navigate('/student/book/select-schedule',{viewTransition:true})} size="large" variant="secondary">Reschedule</Button>{actionMessage?<p className="booking-action-message" aria-live="polite">{actionMessage}</p>:null}{error ? <p className="tm-field__message tm-field__message--error" role="alert">{error}</p> : null}<Button disabled={cancelling || booking?.status === 'Cancelled'} fullWidth onClick={cancelBooking} size="large" variant="danger">{cancelling ? 'Cancelling…' : booking?.status === 'Cancelled' ? 'Booking cancelled' : 'Cancel booking'}</Button></aside></div>
+      <BookingDetailsPanel title={title} status={booking?.status??'Confirmed'} rows={rows} backTo="/student/dashboard" actions={<>
+<Button fullWidth onClick={()=>setActionMessage('The meeting room opens 10 minutes before the lesson.')} size="large">Join lesson</Button><Button fullWidth onClick={()=>navigate('/student/book/select-schedule',{viewTransition:true})} size="large" variant="secondary">Reschedule</Button>{actionMessage?<p className="booking-action-message" aria-live="polite">{actionMessage}</p>:null}{error ? <p className="tm-field__message tm-field__message--error" role="alert">{error}</p> : null}<Button disabled={cancelling || booking?.status === 'Cancelled'} fullWidth onClick={cancelBooking} size="large" variant="danger">{cancelling ? 'Cancelling…' : booking?.status === 'Cancelled' ? 'Booking cancelled' : 'Cancel booking'}</Button>
+      </>}/>
     </AppShell>
   );
 }
@@ -424,7 +525,7 @@ export function NotificationsScreen() {
 
   return (
     <AppShell active="notifications" contentClassName="notifications" title="Notifications">
-      <div className="notification-list">{notifications ? notifications.map((notification,index)=><article className={`student-card notification-item ${notification.status==='Unread'?'is-unread':''}`} key={notification.id} onClick={() => void markRead(notification)}><div className="notification-avatar"><img alt="" src={`/assets/figma/student-tutor-${(index % 3) + 1}.jpg`}/><span /></div><div><h2>{notification.title}</h2><p>{notification.body}</p></div><time>{new Date(notification.createdAtUtc).toLocaleDateString()}</time></article>) : studentNotifications.map(([title,body,time,image],index)=><article className={`student-card notification-item ${index<2?'is-unread':''}`} key={title}><div className="notification-avatar"><img alt="" src={`/assets/figma/student-tutor-${image}.jpg`}/><span /></div><div><h2>{title}</h2><p>{body}</p></div><time>{time}</time></article>)}</div>
+      <div className="notification-list">{notifications ? notifications.map((notification)=><article className={`student-card notification-item notification-with-details ${notification.status==='Unread'?'is-unread':''}`} key={notification.id} onClick={() => void markRead(notification)}><div><h2>{notificationTitle(notification)}</h2><NotificationDetails item={notification}/></div><time>{new Date(notification.createdAtUtc).toLocaleDateString()}</time></article>) : studentNotifications.map(([title,body,time,image],index)=><article className={`student-card notification-item ${index<2?'is-unread':''}`} key={title}><div className="notification-avatar"><img alt="" src={`/assets/figma/student-tutor-${image}.jpg`}/><span /></div><div><h2>{title}</h2><p>{body}</p></div><time>{time}</time></article>)}</div>
     </AppShell>
   );
 }
@@ -444,6 +545,7 @@ export function StudentProfileScreen() {
   useEffect(() => {
     if (!profile) return;
     setDisplayName(profile.displayName);
+    if(profile.avatarUrl)setAvatar(profile.avatarUrl);
     const educationLevel = typeof profile.educationLevel === 'number'
       ? profile.educationLevel
       : Number.parseInt(String(profile.educationLevel), 10);
@@ -461,7 +563,7 @@ export function StudentProfileScreen() {
         : normalizedLevel.includes('adult') ? 4
           : Number.isFinite(grade) && grade <= 5 ? 0
             : Number.isFinite(grade) && grade <= 9 ? 1 : 2;
-      await gatewayClient.saveStudentProfile({ displayName, educationLevel, learningGoal, timezone });
+      await gatewayClient.saveStudentProfile({ displayName, educationLevel, learningGoal, timezone, avatarUrl:avatar });
       setMessage('Profile saved');
     } catch (reason) {
       setMessage(reason instanceof Error ? reason.message : 'Unable to save your profile.');
@@ -497,7 +599,29 @@ export function StudentSettingsScreen() {
   );
 }
 
+export function CourseDetailsScreen() {
+  const loadMine=useCallback(()=>gatewayClient.listMyCourses(),[]);
+  const {data:mine,reload:reloadMine}=useGatewayResource(loadMine,[]);
+  const {courseId}=useParams();
+  const load=useCallback(()=>gatewayClient.getCourse(courseId ?? ''),[courseId]);
+  const {data:course,loading,reload}=useGatewayResource(load,null);
+  const [message,setMessage]=useState('');
+  const closeToast=useCallback(()=>setMessage(''),[]);
+  const [submitting,setSubmitting]=useState(false);
+  const enrolled=mine.some(c=>c.id===courseId);
+  async function enroll(){setMessage('');setSubmitting(true);try{await gatewayClient.enrollCourse(courseId!);setMessage('You are enrolled');await Promise.all([reload(),reloadMine()]);}catch(reason){setMessage(reason instanceof Error?reason.message:'Unable to enroll');}finally{setSubmitting(false);}}
+  return <AppShell active="dashboard" contentClassName="course-details-page" title={course?.title ?? 'Course details'}>
+    <section className="student-card course-details-card">
+      <header className="course-details-actions"><div className="course-details-navigation"><Link className="course-back-link" to="/student/dashboard">← Back to schedule</Link><Link className="course-library-link" to="/student/courses">My courses</Link></div>{course?<Button disabled={submitting||enrolled} onClick={()=>void enroll()}>{enrolled?'Enrolled':submitting?'Enrolling…':'Enroll in course'}</Button>:null}</header>
+      {message?<Toast message={message} tone={message==='You are enrolled'?'success':'error'} onClose={closeToast}/>:null}
+      {course?<div className="course-details-body"><div className="course-details-intro"><img alt={course.title} src={course.image}/><h2>{course.title}</h2><p>{course.description}</p></div><div className="course-details-information"><DetailRows rows={[["Instructor",course.instructor],["Type",course.category],["Enrolment",`${course.enrolled} / ${course.capacity}`]]}/><h3>Session schedule <small>(GMT+07)</small></h3><div className="course-session-grid">{[...course.sessions].sort((a,b)=>a.startAtUtc.localeCompare(b.startAtUtc)).map((session,index)=><article key={session.id}><span>Session {index+1}</span><strong>{new Date(session.startAtUtc).toLocaleDateString('en-GB',{timeZone:'Asia/Ho_Chi_Minh',day:'2-digit',month:'short',year:'numeric'})}</strong><small>{new Date(session.startAtUtc).toLocaleTimeString('en-GB',{timeZone:'Asia/Ho_Chi_Minh',hour:'2-digit',minute:'2-digit'})} – {new Date(session.endAtUtc).toLocaleTimeString('en-GB',{timeZone:'Asia/Ho_Chi_Minh',hour:'2-digit',minute:'2-digit'})}</small></article>)}</div></div></div>:<p>{loading?'Loading course…':'This course is unavailable.'}</p>}
+    </section>
+  </AppShell>;
+}
+
 export const studentRoutes = [
+  { path: '/student/courses', element: <MyCourses /> },
+  { path: '/student/courses/:courseId', element: <CourseDetailsScreen /> },
   { path: '/student/dashboard', element: <StudentDashboard /> },
   { path: '/student/complete-profile', element: <CompleteProfileScreen /> },
   { path: '/student/find-tutors', element: <FindTutorsScreen /> },

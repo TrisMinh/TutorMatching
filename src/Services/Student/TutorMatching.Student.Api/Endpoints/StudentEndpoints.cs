@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using TutorMatching.Student.Api.Domain;
 using TutorMatching.Student.Api.Infrastructure;
+using TutorMatching.BuildingBlocks.Security;
 
 namespace TutorMatching.Student.Api.Endpoints;
 
@@ -16,7 +17,7 @@ public static class StudentEndpoints
         group.MapPut("/me/interests", ReplaceInterestsAsync);
 
         endpoints.MapGet("/internal/v1/students/by-user/{userId:guid}", GetByUserIdAsync)
-            .RequireAuthorization()
+            .RequireServiceCaller("scheduling")
             .WithTags("Internal");
         return endpoints;
     }
@@ -34,6 +35,7 @@ public static class StudentEndpoints
                 candidate.Id,
                 candidate.UserId,
                 candidate.DisplayName,
+                candidate.AvatarUrl,
                 candidate.EducationLevel,
                 candidate.LearningGoal,
                 candidate.Timezone,
@@ -52,6 +54,7 @@ public static class StudentEndpoints
         TimeProvider timeProvider,
         CancellationToken cancellationToken)
     {
+        if(request.AvatarUrl?.Length>2000000)return Results.BadRequest(new{error="Avatar image is too large."});
         var userId = GetUserId(principal);
         var profile = await dbContext.StudentProfiles.SingleOrDefaultAsync(
             candidate => candidate.UserId == userId,
@@ -77,6 +80,7 @@ public static class StudentEndpoints
                 timeProvider.GetUtcNow());
         }
 
+        if(request.AvatarUrl is not null)profile.SetAvatar(request.AvatarUrl);
         await dbContext.SaveChangesAsync(cancellationToken);
         return Results.Ok(new { profile.Id, profile.UserId, profile.DisplayName, profile.Version });
     }
@@ -112,7 +116,7 @@ public static class StudentEndpoints
     {
         var profile = await dbContext.StudentProfiles.AsNoTracking()
             .Where(candidate => candidate.UserId == userId && candidate.Status == StudentStatus.Active)
-            .Select(candidate => new { candidate.Id, candidate.UserId, candidate.DisplayName, candidate.Timezone })
+            .Select(candidate => new { candidate.Id, candidate.UserId, candidate.DisplayName, candidate.Timezone, candidate.AvatarUrl, EducationLevel=candidate.EducationLevel.ToString(), candidate.LearningGoal })
             .SingleOrDefaultAsync(cancellationToken);
         return profile is null ? Results.NotFound() : Results.Ok(profile);
     }
@@ -127,7 +131,8 @@ public sealed record StudentProfileRequest(
     string DisplayName,
     EducationLevel EducationLevel,
     string LearningGoal,
-    string Timezone);
+    string Timezone,
+    string? AvatarUrl = null);
 
 public sealed record SubjectInterestRequest(Guid SubjectId, int Priority);
 

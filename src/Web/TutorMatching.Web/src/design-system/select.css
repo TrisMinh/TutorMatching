@@ -1,0 +1,23 @@
+.tm-select{display:inline-flex;align-items:center;justify-content:space-between;gap:12px;min-width:0;min-height:44px;padding:10px 14px;border:1px solid var(--color-border);border-radius:10px;background:white;color:var(--color-ink);font:13px var(--font-medium);text-align:left;cursor:pointer}.tm-select>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.tm-select>svg{flex:none;color:var(--color-muted);transition:transform 160ms ease}.tm-select[aria-expanded=true]>svg{transform:rotate(180deg)}.tm-select:hover{border-color:#a7c9fb}.tm-select:focus-visible,.tm-select[aria-expanded=true]{outline:2px solid #b6d5ff;outline-offset:2px;border-color:var(--color-primary)}.tm-select:disabled{background:#f5f7fb;color:#9aa9be;cursor:not-allowed}.tm-select-menu{position:fixed;z-index:1000;overflow-y:auto;overscroll-behavior:contain;padding:6px;border:1px solid var(--color-border);border-radius:12px;background:white;box-shadow:0 12px 36px #15274724;box-sizing:border-box;animation:select-appear 140ms ease-out}.tm-select-menu [role=option]{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;min-height:40px;border-radius:7px;color:var(--color-ink);font:13px var(--font-medium);cursor:pointer;box-sizing:border-box}.tm-select-menu [role=option].is-focused{background:#f1f6ff}.tm-select-menu [role=option][aria-selected=true]{background:#e8f2ff;color:var(--color-primary);font-family:var(--font-semibold)}.tm-select-menu [aria-disabled=true]{opacity:.45;cursor:not-allowed}.tutor-filter-bar label>.tm-select{width:100%;margin-top:8px}.schedule-course-jump>.tm-select{max-width:100%;width:280px}.tm-field__control>.tm-select{width:100%}@keyframes select-appear{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}@media(prefers-reduced-motion:reduce){.tm-select-menu{animation:none}.tm-select>svg{transition:none}}
+.student-shell button.tm-select,.tm-field button.tm-select {
+  position:relative;
+  display:inline-flex;
+  align-items:center;
+  justify-content:flex-start;
+  padding-left:14px;
+  padding-right:48px;
+  box-sizing:border-box;
+}
+.student-shell button.tm-select>svg,.tm-field button.tm-select>svg {
+  position:absolute;
+  right:18px;
+  top:50%;
+  width:16px;
+  height:16px;
+  transform:translateY(-50%);
+  pointer-events:none;
+}
+.student-shell button.tm-select[aria-expanded=true]>svg,.tm-field button.tm-select[aria-expanded=true]>svg {
+  transform:translateY(-50%) rotate(180deg);
+}
+.legacy-date button.tm-select { width:auto; height:auto; min-height:40px; background:white; }

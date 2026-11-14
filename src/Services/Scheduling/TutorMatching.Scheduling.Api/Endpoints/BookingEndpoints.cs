@@ -5,11 +5,13 @@ using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using TutorMatching.Scheduling.Api.Domain;
 using TutorMatching.Scheduling.Api.Infrastructure;
+using TutorMatching.BuildingBlocks.Security;
 
 namespace TutorMatching.Scheduling.Api.Endpoints;
 
 public static class BookingEndpoints
 {
+    private static readonly Action<ILogger,Exception?> LogCleanupFailure=LoggerMessage.Define(LogLevel.Warning,new EventId(1201,"HoldCleanup"),"Booking committed; temporary hold cleanup will expire by TTL.");
     public static IEndpointRouteBuilder MapBookingEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var group = endpoints.MapGroup("/api/v1/bookings").WithTags("Bookings").RequireAuthorization();
@@ -17,10 +19,30 @@ public static class BookingEndpoints
         group.MapDelete("/holds/{holdId:guid}", ReleaseHoldAsync).RequireAuthorization(policy => policy.RequireRole("Student"));
         group.MapPost("/", ConfirmAsync).RequireAuthorization(policy => policy.RequireRole("Student"));
         group.MapGet("/", ListAsync);
+        group.MapGet("/{bookingId:guid}/student-profile",async(Guid bookingId,ClaimsPrincipal user,HttpContext context,SchedulingDbContext db,IStudentClient students,CancellationToken ct)=>{
+            var uid=GetUserId(user);
+            var booking=await db.Bookings.AsNoTracking().SingleOrDefaultAsync(b=>b.Id==bookingId&&b.TutorUserId==uid,ct);
+            if(booking is null)return Results.NotFound();
+            try{
+                var student=await students.GetByUserIdAsync(booking.StudentUserId,context.Request.Headers.Authorization.ToString(),ct);
+                if(student is null)return Results.Problem(statusCode:503,title:"Student profile is temporarily unavailable.");
+                return Results.Ok(new{student.Id,student.DisplayName,student.AvatarUrl,student.EducationLevel,student.LearningGoal,student.Timezone});
+            }catch(HttpRequestException){return Results.Problem(statusCode:503,title:"Student profile is temporarily unavailable.");}
+        }).RequireAuthorization(p=>p.RequireRole("Tutor"));
+        group.MapGet("/{bookingId:guid}", async (Guid bookingId,ClaimsPrincipal user,HttpContext context,SchedulingDbContext db,IStudentClient students,CancellationToken ct) => {
+            var uid=GetUserId(user);
+            var booking=await db.Bookings.AsNoTracking().SingleOrDefaultAsync(b=>b.Id==bookingId&&(b.StudentUserId==uid||b.TutorUserId==uid),ct);
+            if(booking is null)return Results.NotFound();
+            string? studentName=null;
+            string? studentAvatarUrl=null;
+            try{var student=await students.GetByUserIdAsync(booking.StudentUserId,context.Request.Headers.Authorization.ToString(),ct);studentName=student?.DisplayName;studentAvatarUrl=student?.AvatarUrl;}
+            catch(HttpRequestException){ /* Booking remains readable if profile dependency is down. */ }
+            return Results.Ok(new{Booking=ToResponse(booking),StudentName=studentName,StudentAvatarUrl=studentAvatarUrl});
+        });
         group.MapDelete("/{bookingId:guid}", CancelAsync);
 
         endpoints.MapPost("/internal/v1/slots/query", QueryBookedSlotsAsync)
-            .RequireAuthorization()
+            .RequireServiceCaller("gateway")
             .WithTags("Internal");
         return endpoints;
     }
@@ -123,6 +145,7 @@ public static class BookingEndpoints
         HttpContext httpContext,
         SchedulingDbContext dbContext,
         IBookingHoldStore holdStore,
+        ITutorClient tutorClient,
         TimeProvider timeProvider,
         CancellationToken cancellationToken)
     {
@@ -130,6 +153,10 @@ public static class BookingEndpoints
             .SingleOrDefaultAsync(booking => booking.SourceHoldId == request.HoldId, cancellationToken);
         if (existing is not null)
         {
+            if(existing.StudentUserId!=GetUserId(principal))return Results.NotFound();
+            if(existing.SourceHoldTokenHash is null||string.IsNullOrWhiteSpace(request.HoldToken)||!CryptographicOperations.FixedTimeEquals(System.Text.Encoding.UTF8.GetBytes(existing.SourceHoldTokenHash),System.Text.Encoding.UTF8.GetBytes(RedisBookingHoldStore.HashToken(request.HoldToken))))
+                return Results.Conflict(new{error="Cannot verify the original booking operation."});
+            httpContext.Items["audit-result-id"]=existing.Id.ToString();
             return Results.Ok(ToResponse(existing));
         }
 
@@ -147,6 +174,9 @@ public static class BookingEndpoints
                 statusCode: StatusCodes.Status409Conflict);
         }
 
+        var availability=await tutorClient.ValidateAvailabilityAsync(hold.TutorId,hold.SubjectId,hold.StartAtUtc,httpContext.Request.Headers.Authorization.ToString(),cancellationToken);
+        if(availability is null)return Results.StatusCode(503);
+        if(!availability.Valid)return Results.Conflict(new{error="The student or tutor now has a conflicting course session."});
         var now = timeProvider.GetUtcNow();
         var booking = Booking.ConfirmFromHold(
             hold.HoldId,
@@ -156,7 +186,7 @@ public static class BookingEndpoints
             hold.TutorUserId,
             hold.SubjectId,
             TimeSlot.Create(hold.StartAtUtc, hold.EndAtUtc),
-            now);
+            now,tokenHash:hold.TokenHash);
         var correlationId = GetCorrelationId(httpContext);
         await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
         dbContext.Bookings.Add(booking);
@@ -177,7 +207,11 @@ public static class BookingEndpoints
             return Results.Conflict(new { error = "Slot conflicts with a confirmed booking." });
         }
 
-        await holdStore.ReleaseAsync(hold, cancellationToken);
+        httpContext.Items["audit-result-id"]=booking.Id.ToString();
+        try{await holdStore.ReleaseAsync(hold, cancellationToken);}
+        catch(Exception exception) when(exception is StackExchange.Redis.RedisException or OperationCanceledException){
+            LogCleanupFailure(httpContext.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("BookingCleanup"),exception);
+        }
         return Results.Created($"/api/v1/bookings/{booking.Id}", ToResponse(booking));
     }
 
@@ -210,9 +244,13 @@ public static class BookingEndpoints
             return Results.NotFound();
         }
 
+        var actor=GetUserId(principal);
+        if(actor!=booking.StudentUserId&&actor!=booking.TutorUserId)return Results.Forbid();
+        if(string.IsNullOrWhiteSpace(reasonCode)||reasonCode.Length>300)return Results.BadRequest(new{error="A cancellation reason of 1–300 characters is required."});
+        if(booking.Status==BookingStatus.Confirmed&&booking.StartAtUtc<=timeProvider.GetUtcNow())return Results.Conflict(new{error="A lesson that has already started cannot be cancelled."});
         try
         {
-            if (booking.Cancel(GetUserId(principal), reasonCode, timeProvider.GetUtcNow()))
+            if (booking.Cancel(actor, reasonCode, timeProvider.GetUtcNow()))
             {
                 dbContext.OutboxMessages.Add(OutboxMessage.BookingCancelled(
                     booking,

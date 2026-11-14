@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using TutorMatching.Notification.Api.Domain;
+using TutorMatching.BuildingBlocks.Security;
 
 namespace TutorMatching.Notification.Api.Infrastructure;
 
@@ -45,11 +46,18 @@ public sealed partial class BookingEventConsumer(
             AutomaticRecoveryEnabled = true,
             ConsumerDispatchConcurrency = 1,
         };
+        if(factory.Ssl.Enabled&&WorkloadTls.Enabled(configuration)){
+            factory.Ssl.ServerName="rabbitmq";
+            factory.Ssl.Certs=[WorkloadTls.ClientCertificate(configuration)];
+            factory.Ssl.CertificateValidationCallback=(_,certificate,_,errors)=>WorkloadTls.ValidateServer(certificate,errors,configuration,"rabbitmq");
+        }
         await using var connection = await factory.CreateConnectionAsync("notification-consumer", cancellationToken);
         await using var channel = await connection.CreateChannelAsync(
             new CreateChannelOptions(true, true, consumerDispatchConcurrency: 1),
             cancellationToken);
-        await DeclareTopologyAsync(channel, cancellationToken);
+        if(configuration.GetValue<bool>("Security:Messaging:RequireSignature"))
+            await channel.QueueDeclarePassiveAsync(QueueName,cancellationToken);
+        else await DeclareTopologyAsync(channel, cancellationToken);
         await channel.BasicQosAsync(0, 20, global: false, cancellationToken);
 
         var consumer = new AsyncEventingBasicConsumer(channel);
@@ -105,6 +113,12 @@ public sealed partial class BookingEventConsumer(
         }
 
         var eventType = delivery.BasicProperties.Type ?? throw new JsonException("Event type is missing.");
+        if(configuration.GetValue<bool>("Security:Messaging:RequireSignature")){
+            string Header(string name)=>delivery.BasicProperties.Headers?.TryGetValue(name,out var value)==true ? value switch {byte[] bytes=>Encoding.UTF8.GetString(bytes),string text=>text,_=>""}:"";
+            var proof=new MessageProof(Header("x-key-id"),Header("x-signed-at"),Header("x-signature"));
+            if(!MessageAuthentication.Verify(configuration,proof,eventId.ToString(),eventType,GetHeaderInt(delivery.BasicProperties.Headers,"event-version",1),delivery.RoutingKey,delivery.BasicProperties.CorrelationId??"",delivery.Body.Span))
+                throw new JsonException("Event signature is missing or invalid.");
+        }
         using var payload = JsonDocument.Parse(delivery.Body);
         await using var scope = scopeFactory.CreateAsyncScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<NotificationDbContext>();

@@ -1,0 +1,62 @@
+.tutor-live { display:grid; align-content:start; gap:24px; min-width:0; }
+.tutor-live .student-card { padding:24px; min-width:0; }
+.tutor-live h2 { font:20px var(--font-semibold); margin:0 0 12px; }
+.tutor-live p { line-height:1.6; color:var(--color-muted); margin:12px 0; }
+.tutor-live-stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; }
+.tutor-live-stats section { display:grid; gap:14px; }
+.tutor-live-stats strong { font:28px var(--font-semibold); color:var(--color-primary); }
+.tutor-live-stats span { font-size:13px; color:var(--color-muted); }
+.tutor-live-heading,.tutor-live-row { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
+.tutor-live-heading a,.tutor-live-row { text-decoration:none; color:var(--color-ink); }
+.tutor-live-heading a { color:var(--color-primary); font-size:13px; }
+.tutor-live-row { padding:16px 0; border-top:1px solid var(--color-border); font-size:14px; }
+.tutor-live-row time { color:var(--color-primary); }
+.tutor-live-row span,.tutor-live-row small { color:var(--color-muted); }
+.tutor-calendar-controls { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin:16px 0; min-width:0; }
+.tutor-calendar-controls>button:not(.tm-button):not(.tm-select) { min-height:40px; min-width:40px; border:1px solid var(--color-border); border-radius:8px; background:white; color:var(--color-primary); font-size:22px; cursor:pointer; }
+.tutor-calendar-controls input { border:1px solid var(--color-border); border-radius:8px; padding:10px; min-height:40px; font:13px var(--font-medium); background:white; color:var(--color-ink); }
+.tutor-calendar-controls .tm-select { max-width:100%; }
+.tutor-live-bookings { display:grid; gap:16px; }
+.tutor-live-bookings article { display:flex; align-items:center; flex-wrap:wrap; gap:16px; }
+.tutor-live-bookings article>div { flex:1; min-width:min(100%,240px); }
+.tutor-live-bookings small { overflow-wrap:anywhere; color:var(--color-muted); }
+.tutor-live-details { margin:24px 0; }
+.tutor-live-details>div { display:grid; grid-template-columns:160px 1fr; gap:16px; padding:18px 0; border-top:1px solid var(--color-border); font-size:14px; }
+.tutor-live-details dt { color:var(--color-muted); }.tutor-live-details dd { margin:0; overflow-wrap:anywhere; }
+.tutor-cancel-confirm { padding:20px; border:1px solid #f4c5cd; background:#fff7f8; border-radius:12px; }
+.tutor-availability-fields { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; margin:20px 0; }
+@media(max-width:900px){.tutor-live-stats{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media(max-width:600px){.tutor-live .student-card{padding:18px}.tutor-live-details>div{grid-template-columns:1fr;gap:8px}.tutor-availability-fields{grid-template-columns:1fr}.tutor-live-heading{align-items:flex-start}.tutor-live-stats{gap:10px}}
+.student-shell--tutor .student-topbar__actions>strong { max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+@media(max-width:1199px) { .student-shell--tutor .student-topbar { grid-template-columns:minmax(0,1fr) auto; } }
+.student-shell--tutor .global-search .student-global-search { display:flex; }
+.availability-workspace { display:grid; grid-template-columns:minmax(0,1fr) 330px; gap:24px; align-items:start; height:calc(100dvh - 150px); min-height:360px; }
+.availability-saved { display:flex; flex-direction:column; max-height:100%; min-height:0; }
+.availability-saved>.tutor-live-heading,.availability-saved>p { flex:none; }
+.availability-window-list { overflow-y:auto; min-height:0; scrollbar-gutter:stable; overscroll-behavior:contain; }
+.availability-window-list:focus-visible { outline:2px solid var(--color-primary); outline-offset:3px; }
+.availability-window-list .tutor-live-row { padding:12px 0; }
+.availability-window-list .tm-button { width:auto; min-width:94px; min-height:40px; padding:8px 16px; }
+.availability-editor { display:grid; gap:16px; min-width:0; }
+.availability-editor .tutor-availability-fields { grid-template-columns:1fr; }
+.availability-editor>.tutor-calendar-controls { margin:0; }
+.availability-editor>.tutor-calendar-controls>.tm-button { width:100%; }
+.availability-editor [role=alert] { margin:0; font-size:13px; color:#b23649; }
+@media(max-width:1000px) { .availability-workspace { grid-template-columns:minmax(0,1fr) 290px; gap:16px; } }
+@media(max-width:700px) {
+ .availability-workspace { grid-template-columns:minmax(0,1fr); height:auto; }
+ .availability-editor { grid-row:1; }
+ .availability-window-list { max-height:45dvh; }
+ .availability-editor .tutor-availability-fields { grid-template-columns:repeat(2,minmax(0,1fr)); }
+ .availability-editor .tutor-availability-fields>.tm-field:first-child { grid-column:1/-1; }
+}
+.student-content.tutor-availability-workspace { padding-bottom:32px; min-height:0; }
+.student-profile-preview { width:min(100%,900px); }
+.student-profile-preview>header { display:flex; align-items:center; gap:20px; padding:6px 0 24px; }
+.student-profile-preview>header>.notification-person { width:80px; height:80px; font-size:24px; }
+.student-profile-preview header h2 { margin:6px 0; font-size:24px; }
+.student-profile-preview header p { margin:0; font-size:14px; }
+.student-profile-preview header>div>span { font-size:12px; color:var(--color-muted); }
+.student-learning-goal { margin-top:24px; padding:20px; border:1px solid var(--color-border); border-radius:12px; background:#f7faff; }
+.student-learning-goal h3 { margin:0; font:16px var(--font-semibold); }
+.student-learning-goal p { margin:10px 0 0; overflow-wrap:anywhere; }

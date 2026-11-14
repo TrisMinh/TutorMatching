@@ -1,0 +1,76 @@
+# Use with: docker compose -f compose.yaml -f compose.ha.yaml up -d --build --wait
+x-single-instance: &single-instance
+  deploy:
+    replicas: 1
+  environment: &replica-environment
+    DOTNET_GCHeapHardLimit: '0x10000000'
+    Diagnostics__ExposeInstance: 'true'
+
+services:
+  service-lb:
+    image: haproxy:3.2-alpine
+    restart: unless-stopped
+    networks: [backend]
+    ports:
+      - '8080:8080'
+      - '127.0.0.1:8404:8404'
+    volumes:
+      - ./deploy/haproxy/replicas.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, http://127.0.0.1:8404/health/ready]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  gateway:
+    <<: *single-instance
+    ports: !reset []
+    environment:
+      <<: *replica-environment
+      Services__Tutor: http://service-lb:8082
+      Services__Scheduling: http://service-lb:8084
+      ReverseProxy__Clusters__identity__Destinations__primary__Address: http://service-lb:8081
+      ReverseProxy__Clusters__tutor__Destinations__primary__Address: http://service-lb:8082
+      ReverseProxy__Clusters__student__Destinations__primary__Address: http://service-lb:8083
+      ReverseProxy__Clusters__scheduling__Destinations__primary__Address: http://service-lb:8084
+      ReverseProxy__Clusters__notification__Destinations__primary__Address: http://service-lb:8085
+
+  identity-service:
+    <<: *single-instance
+    environment:
+      <<: *replica-environment
+      ConnectionStrings__IdentityDb: Host=identity-db;Port=5432;Database=identity_db;Username=identity_app;Password=${POSTGRES_IDENTITY_PASSWORD:-identity_dev};Maximum Pool Size=20;Timeout=5;Command Timeout=20
+
+  tutor-service:
+    <<: *single-instance
+    environment:
+      <<: *replica-environment
+      ConnectionStrings__TutorDb: Host=tutor-db;Port=5432;Database=tutor_db;Username=tutor_app;Password=${POSTGRES_TUTOR_PASSWORD:-tutor_dev};Maximum Pool Size=20;Timeout=5;Command Timeout=20
+      Services__Student: http://service-lb:8083
+      Services__Scheduling: http://service-lb:8084
+
+  student-service:
+    <<: *single-instance
+    environment:
+      <<: *replica-environment
+      ConnectionStrings__StudentDb: Host=student-db;Port=5432;Database=student_db;Username=student_app;Password=${POSTGRES_STUDENT_PASSWORD:-student_dev};Maximum Pool Size=20;Timeout=5;Command Timeout=20
+
+  scheduling-service:
+    <<: *single-instance
+    deploy:
+      replicas: 3
+    environment:
+      <<: *replica-environment
+      ConnectionStrings__SchedulingDb: Host=scheduling-db;Port=5432;Database=scheduling_db;Username=scheduling_app;Password=${POSTGRES_SCHEDULING_PASSWORD:-scheduling_dev};Maximum Pool Size=20;Timeout=5;Command Timeout=20
+      Services__Tutor: http://service-lb:8082
+      Services__Student: http://service-lb:8083
+
+  notification-service:
+    <<: *single-instance
+    environment:
+      <<: *replica-environment
+      ConnectionStrings__NotificationDb: Host=notification-db;Port=5432;Database=notification_db;Username=notification_app;Password=${POSTGRES_NOTIFICATION_PASSWORD:-notification_dev};Maximum Pool Size=20;Timeout=5;Command Timeout=20
+
+  web:
+    volumes:
+      - ./deploy/nginx/ha.conf:/etc/nginx/conf.d/default.conf:ro

@@ -1,0 +1,49 @@
+/* Shared semantic palette for booking badges and request filters. */
+[data-status="Completed"], [data-status="Accepted"] {
+  --status-ink:#147044; --status-bg:#e7f7ee; --status-border:#b6e6cd; --status-dot:#22985f;
+}
+[data-status="Cancelled"], [data-status="Declined"] {
+  --status-ink:#b23649; --status-bg:#fff0f2; --status-border:#f4c5cd; --status-dot:#dc536a;
+}
+[data-status="Pending"], [data-status="PendingPayment"] {
+  --status-ink:#895b09; --status-bg:#fff6df; --status-border:#f1d799; --status-dot:#c48a16;
+}
+[data-status="Confirmed"], [data-status="Upcoming"] {
+  --status-ink:#1761bc; --status-bg:#eaf3ff; --status-border:#bfd9fc; --status-dot:#287de1;
+}
+.booking-status[data-status], .request-accepted[data-status] {
+  display:inline-flex; align-items:center; justify-content:center; gap:7px;
+  width:fit-content; min-height:30px; padding:5px 12px;
+  border:1px solid var(--status-border,#dbe4f1); border-radius:999px;
+  background:var(--status-bg,#f1f5fa); color:var(--status-ink,#53657f);
+  font-size:12px; line-height:18px; white-space:nowrap;
+}
+.booking-status[data-status]::before, .request-accepted[data-status]::before {
+  content:''; flex:none; width:6px; height:6px; border-radius:50%; background:var(--status-dot,#7c8ba1);
+}
+.booking-tabs button[data-status], .tutor-request-tabs button[data-status] {
+  font-family:var(--font-semibold); font-weight:600;
+  min-height:40px; height:auto; padding:9px 17px;
+  border:1px solid transparent; border-radius:12px;
+  color:var(--status-ink); background:var(--status-bg); cursor:pointer;
+  transition:background-color 160ms ease,box-shadow 160ms ease,border-color 160ms ease;
+}
+.booking-tabs button[data-status].is-active, .tutor-request-tabs button[data-status].is-active {
+  color:var(--status-ink); border-color:var(--status-border);
+  box-shadow:0 3px 9px color-mix(in srgb,var(--status-dot) 14%,transparent);
+}
+.booking-tabs button[data-status]:hover, .tutor-request-tabs button[data-status]:hover { border-color:var(--status-border); }
+.booking-tabs button[data-status]:focus-visible, .tutor-request-tabs button[data-status]:focus-visible { outline:2px solid var(--status-dot); outline-offset:3px; }
+.booking-item:has([data-status="Completed"]) { border-left:3px solid #78caa2; }
+.booking-item:has([data-status="Cancelled"]) { border-left:3px solid #efa2af; }
+.booking-item:has([data-status="Confirmed"]) { border-left:3px solid #8cbbf5; }
+@media(max-width:900px) {
+  .booking-item>.booking-status[data-status] { display:inline-flex; margin-top:10px; }
+}
+@media(max-width:600px) {
+  .booking-tabs,.tutor-request-tabs { gap:8px; flex-wrap:wrap; }
+  .booking-tabs button[data-status],.tutor-request-tabs button[data-status] { min-width:0; padding:9px 13px; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .booking-tabs button[data-status],.tutor-request-tabs button[data-status] { transition:none; }
+}

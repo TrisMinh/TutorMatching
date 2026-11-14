@@ -26,6 +26,8 @@ public sealed class StudentProfile
     public Guid Id { get; private set; }
     public Guid UserId { get; private set; }
     public string DisplayName { get; private set; } = string.Empty;
+    public string? AvatarUrl { get; private set; }
+    public void SetAvatar(string avatarUrl) { AvatarUrl=avatarUrl; }
     public EducationLevel EducationLevel { get; private set; }
     public string LearningGoal { get; private set; } = string.Empty;
     public string Timezone { get; private set; } = string.Empty;

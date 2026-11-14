@@ -51,13 +51,16 @@ describe('student routes from Figma', () => {
     const available = vi.spyOn(gatewayClient, 'searchAvailableTutors').mockResolvedValue({ items: [], page: 1, pageSize: 100, total: 0, generatedAtUtc: '2026-11-14T00:00:00Z', partial: false });
     renderAt('/student/find-tutors');
 
-    await user.click(screen.getByRole('button', { name: 'Available today' }));
+    await user.click(screen.getByRole('combobox', {name:'Subject'}));
+    await user.click(await screen.findByRole('option', {name:'Mathematics'}));
+    await user.click(screen.getByRole('combobox', {name:'Availability'}));
+    await user.click(screen.getByRole('option', {name:'Available today'}));
 
     await waitFor(() => expect(available).toHaveBeenCalledWith(expect.objectContaining({
       subjectId: subject.id,
       timezone: 'Asia/Ho_Chi_Minh',
     })));
-    expect(screen.getByRole('button', { name: 'Available today' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('combobox', { name: 'Availability' })).toHaveTextContent('Available today');
     vi.restoreAllMocks();
   });
 

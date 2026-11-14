@@ -6,6 +6,8 @@ Từ **PHẢI**, **KHÔNG ĐƯỢC**, **NÊN** và **CÓ THỂ** mang nghĩa quy
 
 ## Đọc theo vai trò
 
+**Báo cáo triển khai hiện hành:** [Service Security — các chương tách riêng](04-security/README.md), [instance và điều phối Scheduling](03-platform/instances-load-balancing.md), [retry/rollback/recovery](03-platform/retry-rollback-recovery.md), [secure Docker runbook](05-operations/secure-docker-runbook.md). Baseline HS256 đã được thay thế trong secure profile; xem ADR 013.
+
 | Vai trò | Bắt đầu tại |
 |---|---|
 | Thành viên mới | [Phạm vi hệ thống](00-overview/system-scope.md), [Baseline công nghệ](00-overview/technology-baseline.md) |

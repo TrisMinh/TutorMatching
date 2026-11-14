@@ -12,6 +12,7 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
 builder.Services.AddHostedService<BookingEventConsumer>();
 builder.Services.AddHostedService<ReminderWorker>();
+builder.Services.AddDependencyReadiness("database",(sp,ct)=>sp.GetRequiredService<NotificationDbContext>().Database.CanConnectAsync(ct));
 var app = builder.Build();
 
 app.MapTutorMatchingDefaults();

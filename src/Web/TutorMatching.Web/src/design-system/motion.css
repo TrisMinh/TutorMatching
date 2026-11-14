@@ -1,16 +1,16 @@
 @keyframes tm-page-enter {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes tm-view-enter {
-  from { opacity: 0; transform: translateY(8px) scale(0.995); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes tm-view-exit {
   from { opacity: 1; }
-  to { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 0; }
 }
 
 @keyframes tm-list-enter {
@@ -30,12 +30,17 @@
 }
 
 ::view-transition-old(root) {
-  animation: tm-view-exit var(--motion-fast) var(--ease-exit) both;
+  animation: none;
 }
 
 ::view-transition-new(root) {
-  animation: tm-view-enter var(--motion-base) var(--ease-enter) both;
+  animation: none;
 }
+
+.student-content { view-transition-name: page-content; }
+::view-transition-old(page-content) { animation: tm-view-exit 90ms ease-out both; }
+::view-transition-new(page-content) { animation: tm-view-enter 160ms ease-out both; }
+.course-tab-panel { animation: tm-view-enter 180ms ease-out both; }
 
 .auth-entry__content,
 .student-content {
@@ -192,6 +197,7 @@
   ::view-transition-new(root) {
     animation: none !important;
   }
+  ::view-transition-old(page-content),::view-transition-new(page-content),.course-tab-panel { animation: none !important; }
 
   .auth-entry__content,
   .student-content,

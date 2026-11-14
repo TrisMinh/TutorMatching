@@ -56,6 +56,7 @@ public sealed class Booking
     public DateTimeOffset EndAtUtc { get; private set; }
     public BookingStatus Status { get; private set; }
     public Guid SourceHoldId { get; private set; }
+    public string? SourceHoldTokenHash { get; private set; }
     public DateTimeOffset ConfirmedAtUtc { get; private set; }
     public DateTimeOffset? CancelledAtUtc { get; private set; }
     public Guid? CancelledByUserId { get; private set; }
@@ -73,10 +74,11 @@ public sealed class Booking
         Guid tutorUserId,
         Guid subjectId,
         TimeSlot slot,
-        DateTimeOffset now) => new()
+        DateTimeOffset now,string? tokenHash=null) => new()
         {
             Id = Guid.NewGuid(),
             SourceHoldId = sourceHoldId,
+            SourceHoldTokenHash = tokenHash,
             StudentId = studentId,
             StudentUserId = studentUserId,
             TutorId = tutorId,

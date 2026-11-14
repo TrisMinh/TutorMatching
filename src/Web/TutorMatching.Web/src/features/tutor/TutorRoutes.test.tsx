@@ -2,6 +2,15 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { App } from '../../app/App';
+import { gatewayClient } from '../../api';
+
+beforeEach(()=>{
+ vi.spyOn(gatewayClient,'getMyTutorProfile').mockResolvedValue({id:'teacher',displayName:'Minh Anh',bio:'Teacher bio',experienceYears:5,subjects:[],availability:[]});
+ vi.spyOn(gatewayClient,'listMyCourses').mockResolvedValue([]);
+ vi.spyOn(gatewayClient,'listBookings').mockResolvedValue([]);
+ vi.spyOn(gatewayClient,'listSubjects').mockResolvedValue([]);
+});
+afterEach(()=>vi.restoreAllMocks());
 
 function renderAt(path: string) {
   window.sessionStorage.setItem('tutormatching.auth.session', JSON.stringify({ accessToken: 'test', refreshToken: 'test', role: 'Tutor' }));
@@ -9,13 +18,18 @@ function renderAt(path: string) {
 }
 
 describe('tutor routes from Figma', () => {
+  it('keeps the calendar on Dashboard without a duplicate Schedule menu item',()=>{
+    renderAt('/tutor/dashboard');
+    expect(screen.queryByRole('link',{name:'Schedule'})).not.toBeInTheDocument();
+    expect(screen.getByRole('link',{name:'Dashboard'})).toHaveAttribute('href','/tutor/dashboard');
+  });
   it.each([
-    ['/tutor/dashboard', 'Welcome back, Minh Anh'],
+    ['/tutor/dashboard', 'Good morning, Tutor'],
     ['/tutor/onboarding', 'Set up your tutor profile'],
-    ['/tutor/subjects-pricing', 'Subjects and pricing'],
+    ['/tutor/subjects-pricing', 'Teaching subjects'],
     ['/tutor/availability', 'Availability'],
-    ['/tutor/requests', 'Booking requests'],
-    ['/tutor/schedule', 'Schedule'],
+    ['/tutor/requests', 'My bookings'],
+    ['/tutor/schedule', 'Good morning, Tutor'],
     ['/tutor/lessons/18-nov-math', 'Lesson details'],
     ['/tutor/public-profile', 'Public profile preview'],
     ['/tutor/notifications', 'Notifications'],
@@ -26,18 +40,21 @@ describe('tutor routes from Figma', () => {
     expect(screen.getByText('Tutor mode')).toBeInTheDocument();
   });
 
-  it('moves a booking request to the accepted state', async () => {
-    const user = userEvent.setup();
+  it('shows persisted booking states without fake approval actions', async () => {
     renderAt('/tutor/requests');
-    await user.click(screen.getAllByRole('button', { name: 'Accept' })[0]);
-    expect(screen.getByText('Request accepted')).toBeInTheDocument();
+    expect(await screen.findByText('No upcoming bookings.')).toBeInTheDocument();
+    expect(screen.queryByRole('button',{name:'Accept'})).not.toBeInTheDocument();
   });
 
-  it('adds the configured availability block', async () => {
+  it('requires saving an added future availability block', async () => {
     const user = userEvent.setup();
     renderAt('/tutor/availability');
+    await screen.findByRole('heading',{name:'Saved availability'});
+    await user.clear(screen.getByLabelText('Date',{exact:true}));
+    await user.type(screen.getByLabelText('Date',{exact:true}),'2099-01-01');
     await user.click(screen.getByRole('button', { name: 'Add time block' }));
-    expect(screen.getByText('09:00 – 12:00 added')).toBeInTheDocument();
+    expect(screen.getByText('Unsaved changes')).toBeInTheDocument();
+    expect(screen.getByRole('button',{name:'Save availability'})).toBeEnabled();
   });
 
   it('toggles a tutor preference', async () => {

@@ -18,6 +18,7 @@ public sealed class StudentDbContext(DbContextOptions<StudentDbContext> options)
         profiles.Property(profile => profile.UserId).HasColumnName("user_id");
         profiles.HasIndex(profile => profile.UserId).IsUnique();
         profiles.Property(profile => profile.DisplayName).HasColumnName("display_name").HasMaxLength(100);
+        profiles.Property(profile => profile.AvatarUrl).HasColumnName("avatar_url").HasMaxLength(2000000);
         profiles.Property(profile => profile.EducationLevel).HasColumnName("education_level").HasConversion<string>().HasMaxLength(30);
         profiles.Property(profile => profile.LearningGoal).HasColumnName("learning_goal").HasMaxLength(2000);
         profiles.Property(profile => profile.Timezone).HasColumnName("timezone").HasMaxLength(100);

@@ -1,5 +1,7 @@
 # JWT và phân quyền
 
+> **Baseline lịch sử, đã được thay thế trong secure Docker.** Đọc [Identity/JWT RS256](identity-and-jwt.md), [authorization/BOLA](authorization-and-bola.md), [thu hồi token tức thời](token-revocation.md). HS256, hoãn service identity và chờ access token hết hạn bên dưới chỉ mô tả baseline cũ. Rotation current/previous là định hướng cũ, chưa được chứng minh trong code hiện tại.
+
 ## Thông số chuẩn
 
 | Thuộc tính | Giá trị |

@@ -30,6 +30,7 @@ public sealed class SchedulingDbContext(DbContextOptions<SchedulingDbContext> op
         bookings.Property(booking => booking.EndAtUtc).HasColumnName("end_at_utc");
         bookings.Property(booking => booking.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(20);
         bookings.Property(booking => booking.SourceHoldId).HasColumnName("source_hold_id");
+        bookings.Property(booking => booking.SourceHoldTokenHash).HasColumnName("source_hold_token_hash").HasMaxLength(64);
         bookings.HasIndex(booking => booking.SourceHoldId).IsUnique();
         bookings.Property(booking => booking.ConfirmedAtUtc).HasColumnName("confirmed_at_utc");
         bookings.Property(booking => booking.CancelledAtUtc).HasColumnName("cancelled_at_utc");

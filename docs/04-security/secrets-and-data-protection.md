@@ -1,5 +1,7 @@
 # Secret và bảo vệ dữ liệu
 
+> Baseline định hướng; cấu hình hiện hành dùng RSA key files, workload PKI và per-service credentials tại [Secrets và vận hành](secrets-and-operations.md). Không suy ra mọi control, rotation, cost password hay CI scanner bên dưới đã có trong code.
+
 ## Phân loại
 
 | Loại | Ví dụ | Xử lý |

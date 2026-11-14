@@ -14,6 +14,14 @@ public sealed class BookingEventProjector(NotificationDbContext dbContext)
         DateTimeOffset now,
         CancellationToken cancellationToken)
     {
+        // Competing consumers may receive confirmation and cancellation out of order.
+        // Serialize a booking's projection on the database, across all replicas.
+        if (dbContext.Database.IsRelational())
+        {
+            if (dbContext.Database.CurrentTransaction is null) throw new InvalidOperationException("Projection requires a transaction.");
+            var bookingKey = payload.GetProperty("bookingId").GetGuid().ToString();
+            await dbContext.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock(hashtextextended({bookingKey}, 0))", cancellationToken);
+        }
         if (await dbContext.ProcessedEvents.AnyAsync(item => item.EventId == eventId, cancellationToken))
         {
             return false;
@@ -30,7 +38,7 @@ public sealed class BookingEventProjector(NotificationDbContext dbContext)
         switch (eventType)
         {
             case "BookingConfirmed":
-                AddConfirmed(eventId, payload, now);
+                await AddConfirmedAsync(eventId, payload, now, cancellationToken);
                 break;
             case "BookingCancelled":
                 await AddCancelledAsync(eventId, payload, now, cancellationToken);
@@ -42,12 +50,13 @@ public sealed class BookingEventProjector(NotificationDbContext dbContext)
         return true;
     }
 
-    private void AddConfirmed(Guid eventId, JsonElement payload, DateTimeOffset now)
+    private async Task AddConfirmedAsync(Guid eventId, JsonElement payload, DateTimeOffset now, CancellationToken cancellationToken)
     {
         var bookingId = payload.GetProperty("bookingId").GetGuid();
         var studentUserId = payload.GetProperty("StudentUserId").GetGuid();
         var tutorUserId = payload.GetProperty("TutorUserId").GetGuid();
         var startAtUtc = payload.GetProperty("StartAtUtc").GetDateTimeOffset();
+        var cancelled = await dbContext.Notifications.AnyAsync(item => item.BookingId == bookingId && item.Type == "BookingCancelled", cancellationToken);
         foreach (var recipient in new[] { studentUserId, tutorUserId })
         {
             dbContext.Notifications.Add(NotificationItem.Create(
@@ -58,7 +67,7 @@ public sealed class BookingEventProjector(NotificationDbContext dbContext)
                 "Booking confirmed",
                 $"Your tutoring session starts at {startAtUtc:O}.",
                 now));
-            dbContext.ReminderSchedules.Add(ReminderSchedule.Create(
+            if (!cancelled) dbContext.ReminderSchedules.Add(ReminderSchedule.Create(
                 bookingId,
                 recipient,
                 eventId,

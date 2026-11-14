@@ -65,6 +65,11 @@ namespace TutorMatching.Scheduling.Api.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("source_hold_id");
 
+                    b.Property<string>("SourceHoldTokenHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("source_hold_token_hash");
+
                     b.Property<DateTimeOffset>("StartAtUtc")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("start_at_utc");

@@ -38,6 +38,8 @@ Mỗi quyết định dưới đây là `Accepted` cho phiên bản đầu. Thay
 
 ## ADR 009 JWT HMAC cho demo
 
+**Đã supersede trong secure profile bởi ADR 013.** Nội dung sau giữ lại làm lịch sử.
+
 **Quyết định:** Identity ký HS256 bằng secret tối thiểu 32 byte từ environment/secret store. Gateway và service cùng validate issuer, audience, signature, lifetime; service vẫn kiểm tra role/owner. Production nên chuyển asymmetric key.
 
 ## ADR 010 Kênh notification
@@ -54,4 +56,12 @@ khai.
 ## ADR 012 Quan sát hệ thống
 
 **Quyết định:** W3C Trace Context, OpenTelemetry, JSON logs, `X-Correlation-ID` tương thích legacy và metrics theo RED/USE. Health endpoint không thay monitoring; readiness kiểm dependency bắt buộc, liveness chỉ kiểm process.
+
+## ADR 013 Service Security và deployment hiện hành
+
+**Quyết định:** Secure Docker dùng RS256, Identity giữ private key riêng, các API chỉ verify bằng public key. HTTP giữa workload dùng mTLS và caller allowlist, internal HAProxy dùng TLS passthrough. Logout/access revocation dựa trên Redis TLS/ACL; Identity có quyền ghi trạng thái thu hồi, các API khác chỉ đọc. Broker dùng mTLS/tài khoản riêng, Scheduling ký event, Notification verify trước inbox. Audit metadata có HMAC chain trong persistent volume.
+
+**Đánh đổi:** Không còn xác thực hoàn toàn phi trạng thái vì API kiểm Redis; cache lỗi thì fail closed. Local CA chưa auto-renew/CRL, local audit chưa immutable/legal evidence, chưa OIDC/SSO hoặc chữ ký người dùng. HTTP demo chỉ loopback vẫn được giữ, PostgreSQL/SMTP chưa TLS. Không gọi đây là security production hoàn chỉnh.
+
+**Instance:** 3 Scheduling, mỗi API khác và Gateway 1; tổng 8. Không tạo thêm service hoặc replica chỉ vì thêm security. Xem [báo cáo security](../04-security/README.md), [instance](../03-platform/instances-load-balancing.md), [recovery](../03-platform/retry-rollback-recovery.md) và [runbook](../05-operations/secure-docker-runbook.md).
 

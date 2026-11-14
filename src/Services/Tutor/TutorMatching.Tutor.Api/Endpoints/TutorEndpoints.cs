@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using TutorMatching.Tutor.Api.Domain;
 using TutorMatching.Tutor.Api.Infrastructure;
+using TutorMatching.BuildingBlocks.Security;
 
 namespace TutorMatching.Tutor.Api.Endpoints;
 
@@ -12,6 +13,10 @@ public static class TutorEndpoints
         var publicGroup = endpoints.MapGroup("/api/v1/tutors").WithTags("Tutors");
         publicGroup.MapGet("/", SearchAsync).AllowAnonymous();
         publicGroup.MapGet("/{id:guid}", GetByIdAsync).AllowAnonymous();
+        publicGroup.MapGet("/me", async (ClaimsPrincipal user,TutorDbContext db,CancellationToken ct) => {
+            var id=await db.TutorProfiles.Where(t=>t.UserId==GetUserId(user)).Select(t=>(Guid?)t.Id).SingleOrDefaultAsync(ct);
+            return id is null ? Results.NotFound() : await GetByIdAsync(id.Value,db,ct);
+        }).RequireAuthorization(policy=>policy.RequireRole("Tutor"));
         publicGroup.MapPut("/me", UpsertProfileAsync).RequireAuthorization(policy => policy.RequireRole("Tutor"));
         publicGroup.MapPut("/me/subjects", ReplaceSubjectsAsync).RequireAuthorization(policy => policy.RequireRole("Tutor"));
         publicGroup.MapPut("/me/availability", ReplaceAvailabilityAsync).RequireAuthorization(policy => policy.RequireRole("Tutor"));
@@ -26,7 +31,7 @@ public static class TutorEndpoints
             .WithTags("Subjects");
 
         endpoints.MapGet("/internal/v1/tutors/{id:guid}/availability", ValidateAvailabilityAsync)
-            .RequireAuthorization()
+            .RequireServiceCaller("scheduling")
             .WithTags("Internal");
         return endpoints;
     }
@@ -123,6 +128,7 @@ public static class TutorEndpoints
         }
 
         var ids = request.Select(item => item.SubjectId).Distinct().ToArray();
+        if(ids.Length!=request.Count||request.Any(item=>!Enum.IsDefined(item.ProficiencyLevel)))return Results.BadRequest(new{error="Subjects must be unique and proficiency must be valid."});
         if (await dbContext.Subjects.CountAsync(subject => ids.Contains(subject.Id) && subject.IsActive, cancellationToken) != ids.Length)
         {
             return Results.ValidationProblem(new Dictionary<string, string[]> { ["subjects"] = ["One or more subjects are invalid or inactive."] });
@@ -140,6 +146,11 @@ public static class TutorEndpoints
         TimeProvider timeProvider,
         CancellationToken cancellationToken)
     {
+        var ordered=request.OrderBy(window=>window.StartAtUtc).ToArray();
+        if(ordered.Any(window=>window.EndAtUtc<=window.StartAtUtc||window.StartAtUtc.Offset!=TimeSpan.Zero||window.EndAtUtc.Offset!=TimeSpan.Zero
+            ||window.StartAtUtc.Minute%30!=0||window.EndAtUtc.Minute%30!=0||window.StartAtUtc.Second!=0||window.EndAtUtc.Second!=0||window.StartAtUtc.Millisecond!=0||window.EndAtUtc.Millisecond!=0)
+            ||ordered.Skip(1).Where((window,index)=>window.StartAtUtc<ordered[index].EndAtUtc).Any())
+            return Results.BadRequest(new{error="Availability windows must be valid UTC intervals without overlaps."});
         var userId = GetUserId(principal);
         var profile = await dbContext.TutorProfiles.Include(candidate => candidate.AvailabilityWindows)
             .SingleOrDefaultAsync(candidate => candidate.UserId == userId, cancellationToken);
@@ -161,6 +172,7 @@ public static class TutorEndpoints
         Guid id,
         Guid subjectId,
         DateTimeOffset startAtUtc,
+        ClaimsPrincipal principal,
         TutorDbContext dbContext,
         CancellationToken cancellationToken)
     {
@@ -172,6 +184,7 @@ public static class TutorEndpoints
                 profile.Id,
                 profile.UserId,
                 valid = profile.Status == TutorStatus.Active
+                    && !dbContext.CourseSessions.Any(session=>session.StartAtUtc<endAtUtc&&startAtUtc<session.EndAtUtc&&(dbContext.Courses.Any(course=>course.Id==session.CourseId&&course.TutorId==id)||dbContext.CourseEnrollments.Any(enrollment=>enrollment.CourseId==session.CourseId&&enrollment.StudentUserId==GetUserId(principal))))
                     && profile.Subjects.Any(subject => subject.SubjectId == subjectId)
                     && profile.AvailabilityWindows.Any(window => window.StartAtUtc <= startAtUtc && window.EndAtUtc >= endAtUtc),
             })

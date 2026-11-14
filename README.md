@@ -33,10 +33,14 @@ RabbitMQ 3.13 và Docker Compose. API public đi qua Gateway tại
 Sao chép `.env.example` thành `.env`, thay `JWT_SIGNING_KEY`, rồi chạy:
 
 ```powershell
-docker compose up --build -d
-docker compose ps
+./scripts/start-ha.ps1
+docker compose -f compose.yaml -f compose.ha.yaml ps
 postman collection run "postman/collections/TutorMatching Smoke"
 ```
+
+Cấu hình trên chạy **3 instance Scheduling; Identity, Tutor, Student, Notification và Gateway mỗi loại 1 instance** (tổng 8 API/Gateway), điều phối và kiểm tra sức khỏe qua HAProxy. Xem [instance](docs/03-platform/instances-load-balancing.md) và [retry/rollback](docs/03-platform/retry-rollback-recovery.md). Bảng trạng thái: `http://localhost:8404/stats`. Secure deployment cần đủ ba file compose như mô tả bên dưới.
+
+**Secure deployment hiện hành dùng ba file** `compose.yaml`, `compose.ha.yaml`, `compose.security.yaml`; `start-ha.ps1` đã xử lý cả PKI và broker provisioning, cần Python + cryptography. Frontend HTTPS: `https://localhost:3443`, API HTTPS: `https://localhost:8443`; HTTP cũ chỉ giữ trên loopback cho demo. Đọc [các chương Service Security](docs/04-security/README.md), [báo cáo instance](docs/03-platform/instances-load-balancing.md), [retry/rollback](docs/03-platform/retry-rollback-recovery.md) và [secure runbook](docs/05-operations/secure-docker-runbook.md). Khóa RSA được sinh riêng; JWT_SIGNING_KEY trong baseline không phải private key dùng bởi secure profile.
 
 Sau khi các health check hoàn tất, mở giao diện tại `http://localhost:3000`.
 Nginx chuyển tiếp `/api/*` tới Gateway nên frontend và API chạy cùng origin;

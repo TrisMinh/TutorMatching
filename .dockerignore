@@ -6,4 +6,5 @@
 TestResults
 coverage
 .env
+.security
 

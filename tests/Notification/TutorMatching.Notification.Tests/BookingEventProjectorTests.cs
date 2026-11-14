@@ -7,6 +7,21 @@ namespace TutorMatching.Notification.Tests;
 public sealed class BookingEventProjectorTests
 {
     [Fact]
+    public async Task LateConfirmationCannotRecreateRemindersAfterCancellation()
+    {
+        var options = new DbContextOptionsBuilder<NotificationDbContext>().UseInMemoryDatabase($"notification-{Guid.NewGuid():N}").Options;
+        await using var db = new NotificationDbContext(options);
+        var projector = new BookingEventProjector(db);
+        var payload = JsonSerializer.SerializeToElement(new { bookingId = Guid.NewGuid(), StudentUserId = Guid.NewGuid(), TutorUserId = Guid.NewGuid(), StartAtUtc = DateTimeOffset.UtcNow.AddDays(1) });
+        await projector.ApplyAsync(Guid.NewGuid(), "BookingCancelled", 1, payload, DateTimeOffset.UtcNow, default);
+        await db.SaveChangesAsync();
+        await projector.ApplyAsync(Guid.NewGuid(), "BookingConfirmed", 1, payload, DateTimeOffset.UtcNow, default);
+        await db.SaveChangesAsync();
+        Assert.Empty(await db.ReminderSchedules.ToListAsync());
+        Assert.Equal(4, await db.Notifications.CountAsync());
+    }
+
+    [Fact]
     public async Task DuplicateConfirmedEventHasNoDuplicateEffects()
     {
         var options = new DbContextOptionsBuilder<NotificationDbContext>()

@@ -9,6 +9,7 @@ builder.Services.AddDbContext<StudentDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("StudentDb")
         ?? "Host=localhost;Port=54323;Database=student_db;Username=student_app;Password=student_dev"));
 builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddDependencyReadiness("database",(sp,ct)=>sp.GetRequiredService<StudentDbContext>().Database.CanConnectAsync(ct));
 var app = builder.Build();
 
 app.MapTutorMatchingDefaults();

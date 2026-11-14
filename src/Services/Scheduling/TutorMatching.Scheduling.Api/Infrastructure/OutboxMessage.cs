@@ -81,7 +81,7 @@ public sealed class OutboxMessage
     {
         AttemptCount++;
         LastError = error.Length <= 1000 ? error : error[..1000];
-        NextAttemptAtUtc = now.AddSeconds(Math.Min(60, Math.Pow(2, AttemptCount)));
+        NextAttemptAtUtc = now.AddSeconds(Math.Min(300,Math.Pow(2,Math.Min(AttemptCount,8)))+Random.Shared.NextDouble()*2);
         LockedUntilUtc = null;
     }
 
