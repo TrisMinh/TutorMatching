@@ -1,0 +1,23 @@
+$kind: http-request
+name: Search available tutors
+order: 11000
+url: '{{baseUrl}}/api/v1/search/available-tutors?subjectId={{subjectId}}&date={{bookingDate}}&timezone=Asia/Ho_Chi_Minh&page=1&pageSize=20'
+method: GET
+queryParams:
+  - key: subjectId
+    value: '{{subjectId}}'
+  - key: date
+    value: '{{bookingDate}}'
+  - key: timezone
+    value: Asia/Ho_Chi_Minh
+  - key: page
+    value: '1'
+  - key: pageSize
+    value: '20'
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('search composed', () => pm.response.to.have.status(200));
+      const body = pm.response.json();
+      pm.expect(body.partial).to.equal(false);
+      pm.expect(body.items.some(item => item.id === pm.collectionVariables.get('tutorId'))).to.equal(true);

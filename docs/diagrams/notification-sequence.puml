@@ -1,0 +1,33 @@
+@startuml notification-sequence
+!include _style.puml
+title Outbox to Notification and Reminder
+autonumber
+database "SchedulingDb\nOutbox" as Outbox
+participant "Outbox Publisher" as Publisher
+queue "RabbitMQ" as MQ
+participant "Notification Consumer" as Consumer
+database "NotificationDb\nInbox + Work" as NDB
+participant "Reminder Worker" as Worker
+
+Publisher -> Outbox : SELECT pending FOR UPDATE SKIP LOCKED
+Outbox --> Publisher : event batch
+Publisher -> MQ : publish persistent + mandatory
+MQ --> Publisher : publisher confirm
+Publisher -> Outbox : set publishedAtUtc
+MQ --> Consumer : BookingConfirmed (at-least-once)
+Consumer -> NDB : BEGIN insert ProcessedEvent\n+ notifications + reminders
+alt eventId mới
+  NDB --> Consumer : COMMIT
+  Consumer --> MQ : ACK
+else duplicate eventId
+  NDB --> Consumer : unique violation / existing
+  Consumer --> MQ : ACK without duplicate effect
+end
+
+== Khi reminder đến hạn ==
+Worker -> NDB : claim due FOR UPDATE SKIP LOCKED\nset Processing + lease
+NDB --> Worker : batch
+Worker -> Worker : deliver in-app / SMTP adapter
+Worker -> NDB : Sent hoặc bounded retry
+@enduml
+

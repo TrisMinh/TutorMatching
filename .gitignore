@@ -8,4 +8,15 @@ test-results/
 *.tsbuildinfo
 vite.config.js
 vite.config.d.ts
+**/bin/
+**/obj/
+.vs/
+.idea/
+TestResults/
+coverage/
+*.user
+*.suo
+.env
+.postman/
+postman/skills/
 

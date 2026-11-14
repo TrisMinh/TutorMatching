@@ -1,0 +1,33 @@
+@startuml student-domain
+!include _style.puml
+title Student Domain
+
+class StudentProfile <<Aggregate Root>> {
+  +Id: UUID
+  +UserId: UUID
+  +DisplayName: string
+  +EducationLevel: EducationLevel
+  +LearningGoal: string
+  +Timezone: string
+  +UpdateProfile()
+  +ReplaceInterests()
+}
+class SubjectInterest <<Entity>> {
+  +SubjectId: UUID
+  +Priority: int
+}
+enum EducationLevel {
+  Primary
+  LowerSecondary
+  UpperSecondary
+  University
+  Adult
+}
+
+StudentProfile "1" *-- "0..*" SubjectInterest
+StudentProfile --> EducationLevel
+note bottom of SubjectInterest
+SubjectId là external reference, không phải foreign key xuyên TutorDb.
+end note
+@enduml
+

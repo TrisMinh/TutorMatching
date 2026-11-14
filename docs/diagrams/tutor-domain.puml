@@ -1,0 +1,42 @@
+@startuml tutor-domain
+!include _style.puml
+title Tutor Domain
+
+class TutorProfile <<Aggregate Root>> {
+  +Id: UUID
+  +UserId: UUID
+  +DisplayName: string
+  +UpdateProfile()
+  +ReplaceSubjects()
+  +ReplaceAvailability()
+}
+class TutorSubject <<Entity>> {
+  +SubjectId: UUID
+  +Proficiency: Level
+}
+class AvailabilityWindow <<Entity>> {
+  +StartAtUtc: instant
+  +EndAtUtc: instant
+  +Overlaps(): bool
+}
+class Subject <<Entity>> {
+  +Id: UUID
+  +Code: string
+  +IsActive: bool
+}
+enum Level {
+  Beginner
+  Intermediate
+  Advanced
+  Expert
+}
+
+TutorProfile "1" *-- "0..*" TutorSubject
+TutorProfile "1" *-- "0..*" AvailabilityWindow
+TutorSubject "*" --> "1" Subject
+TutorSubject --> Level
+note bottom of AvailabilityWindow
+btree_gist exclusion constraint ngăn window chồng nhau.
+end note
+@enduml
+

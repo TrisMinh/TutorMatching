@@ -1,0 +1,217 @@
+x-api-common: &api-common
+  restart: unless-stopped
+  networks: [backend, data]
+  environment: &api-environment
+    ASPNETCORE_ENVIRONMENT: Production
+    Jwt__Issuer: tutormatching.identity
+    Jwt__Audience: tutormatching.api
+    Jwt__SigningKey: ${JWT_SIGNING_KEY:-development-only-signing-key-change-before-production}
+    Jwt__AccessTokenMinutes: 15
+    Jwt__RefreshTokenDays: 7
+    Jwt__ClockSkewSeconds: 30
+  healthcheck:
+    test: [CMD, curl, --fail, --silent, http://localhost:8080/health/ready]
+    interval: 10s
+    timeout: 5s
+    retries: 12
+    start_period: 20s
+
+x-postgres-common: &postgres-common
+  image: postgres:17-alpine
+  restart: unless-stopped
+  networks: [data]
+  healthcheck:
+    test: [CMD-SHELL, pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB]
+    interval: 5s
+    timeout: 5s
+    retries: 20
+
+services:
+  gateway:
+    <<: *api-common
+    networks: [backend]
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+      args:
+        PROJECT_PATH: src/Gateway/TutorMatching.Gateway/TutorMatching.Gateway.csproj
+        ASSEMBLY_NAME: TutorMatching.Gateway
+    ports: ["8080:8080"]
+    depends_on:
+      identity-service: { condition: service_healthy }
+      tutor-service: { condition: service_healthy }
+      student-service: { condition: service_healthy }
+      scheduling-service: { condition: service_healthy }
+      notification-service: { condition: service_healthy }
+
+  identity-service:
+    <<: *api-common
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+      args:
+        PROJECT_PATH: src/Services/Identity/TutorMatching.Identity.Api/TutorMatching.Identity.Api.csproj
+        ASSEMBLY_NAME: TutorMatching.Identity.Api
+    environment:
+      <<: *api-environment
+      ConnectionStrings__IdentityDb: Host=identity-db;Port=5432;Database=identity_db;Username=identity_app;Password=${POSTGRES_IDENTITY_PASSWORD:-identity_dev}
+    depends_on:
+      identity-db: { condition: service_healthy }
+
+  tutor-service:
+    <<: *api-common
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+      args:
+        PROJECT_PATH: src/Services/Tutor/TutorMatching.Tutor.Api/TutorMatching.Tutor.Api.csproj
+        ASSEMBLY_NAME: TutorMatching.Tutor.Api
+    environment:
+      <<: *api-environment
+      ConnectionStrings__TutorDb: Host=tutor-db;Port=5432;Database=tutor_db;Username=tutor_app;Password=${POSTGRES_TUTOR_PASSWORD:-tutor_dev}
+    depends_on:
+      tutor-db: { condition: service_healthy }
+
+  student-service:
+    <<: *api-common
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+      args:
+        PROJECT_PATH: src/Services/Student/TutorMatching.Student.Api/TutorMatching.Student.Api.csproj
+        ASSEMBLY_NAME: TutorMatching.Student.Api
+    environment:
+      <<: *api-environment
+      ConnectionStrings__StudentDb: Host=student-db;Port=5432;Database=student_db;Username=student_app;Password=${POSTGRES_STUDENT_PASSWORD:-student_dev}
+    depends_on:
+      student-db: { condition: service_healthy }
+
+  scheduling-service:
+    <<: *api-common
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+      args:
+        PROJECT_PATH: src/Services/Scheduling/TutorMatching.Scheduling.Api/TutorMatching.Scheduling.Api.csproj
+        ASSEMBLY_NAME: TutorMatching.Scheduling.Api
+    environment:
+      <<: *api-environment
+      ConnectionStrings__SchedulingDb: Host=scheduling-db;Port=5432;Database=scheduling_db;Username=scheduling_app;Password=${POSTGRES_SCHEDULING_PASSWORD:-scheduling_dev}
+      ConnectionStrings__Redis: redis:6379,abortConnect=false
+      ConnectionStrings__RabbitMq: amqp://${RABBITMQ_USER:-tutormatching}:${RABBITMQ_PASSWORD:-rabbit_dev}@rabbitmq:5672/
+      Services__Tutor: http://tutor-service:8080
+      Services__Student: http://student-service:8080
+    depends_on:
+      scheduling-db: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+      tutor-service: { condition: service_healthy }
+      student-service: { condition: service_healthy }
+
+  notification-service:
+    <<: *api-common
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+      args:
+        PROJECT_PATH: src/Services/Notification/TutorMatching.Notification.Api/TutorMatching.Notification.Api.csproj
+        ASSEMBLY_NAME: TutorMatching.Notification.Api
+    environment:
+      <<: *api-environment
+      ConnectionStrings__NotificationDb: Host=notification-db;Port=5432;Database=notification_db;Username=notification_app;Password=${POSTGRES_NOTIFICATION_PASSWORD:-notification_dev}
+      ConnectionStrings__RabbitMq: amqp://${RABBITMQ_USER:-tutormatching}:${RABBITMQ_PASSWORD:-rabbit_dev}@rabbitmq:5672/
+      Email__Host: mailpit
+      Email__Port: 1025
+      Email__EnableSsl: false
+      Email__From: no-reply@demo.tutormatching.local
+    depends_on:
+      notification-db: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+      mailpit: { condition: service_started }
+
+  identity-db:
+    <<: *postgres-common
+    environment:
+      POSTGRES_DB: identity_db
+      POSTGRES_USER: identity_app
+      POSTGRES_PASSWORD: ${POSTGRES_IDENTITY_PASSWORD:-identity_dev}
+    volumes: [identity-data:/var/lib/postgresql/data]
+
+  tutor-db:
+    <<: *postgres-common
+    environment:
+      POSTGRES_DB: tutor_db
+      POSTGRES_USER: tutor_app
+      POSTGRES_PASSWORD: ${POSTGRES_TUTOR_PASSWORD:-tutor_dev}
+    volumes: [tutor-data:/var/lib/postgresql/data]
+
+  student-db:
+    <<: *postgres-common
+    environment:
+      POSTGRES_DB: student_db
+      POSTGRES_USER: student_app
+      POSTGRES_PASSWORD: ${POSTGRES_STUDENT_PASSWORD:-student_dev}
+    volumes: [student-data:/var/lib/postgresql/data]
+
+  scheduling-db:
+    <<: *postgres-common
+    environment:
+      POSTGRES_DB: scheduling_db
+      POSTGRES_USER: scheduling_app
+      POSTGRES_PASSWORD: ${POSTGRES_SCHEDULING_PASSWORD:-scheduling_dev}
+    volumes: [scheduling-data:/var/lib/postgresql/data]
+
+  notification-db:
+    <<: *postgres-common
+    environment:
+      POSTGRES_DB: notification_db
+      POSTGRES_USER: notification_app
+      POSTGRES_PASSWORD: ${POSTGRES_NOTIFICATION_PASSWORD:-notification_dev}
+    volumes: [notification-data:/var/lib/postgresql/data]
+
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    command: [redis-server, --appendonly, "yes"]
+    networks: [data]
+    volumes: [redis-data:/data]
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    restart: unless-stopped
+    networks: [backend, data]
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-tutormatching}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-rabbit_dev}
+    ports: ["127.0.0.1:15672:15672"]
+    volumes: [rabbitmq-data:/var/lib/rabbitmq]
+    healthcheck:
+      test: [CMD, rabbitmq-diagnostics, -q, ping]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  mailpit:
+    image: axllent/mailpit:v1.27.8
+    restart: unless-stopped
+    networks: [backend]
+    ports: ["127.0.0.1:8025:8025"]
+
+networks:
+  backend: {}
+  data: {}
+
+volumes:
+  identity-data: {}
+  tutor-data: {}
+  student-data: {}
+  scheduling-data: {}
+  notification-data: {}
+  redis-data: {}
+  rabbitmq-data: {}
+

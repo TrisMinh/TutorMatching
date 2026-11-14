@@ -1,0 +1,39 @@
+$kind: collection
+name: TutorMatching Smoke
+description: End-to-end smoke flow through the public API Gateway.
+variables:
+  baseUrl: 'http://localhost:8080'
+  password: 'TutorMatching!123'
+  runId: ''
+  studentToken: ''
+  tutorToken: ''
+  subjectId: ''
+  tutorId: ''
+  holdId: ''
+  holdToken: ''
+  bookingDate: ''
+  availabilityStart: ''
+  availabilityEnd: ''
+  bookingStart: ''
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{studentToken}}'
+scripts:
+  - type: http:beforeRequest
+    language: text/javascript
+    code: |-
+      if (!pm.collectionVariables.get('runId')) {
+        pm.collectionVariables.set('runId', Date.now().toString());
+      }
+      const day = new Date();
+      day.setUTCDate(day.getUTCDate() + 2);
+      day.setUTCHours(0, 0, 0, 0);
+      pm.collectionVariables.set('bookingDate', day.toISOString().slice(0, 10));
+      const availabilityStart = new Date(day); availabilityStart.setUTCHours(2);
+      const bookingStart = new Date(day); bookingStart.setUTCHours(3);
+      const availabilityEnd = new Date(day); availabilityEnd.setUTCHours(6);
+      pm.collectionVariables.set('availabilityStart', availabilityStart.toISOString());
+      pm.collectionVariables.set('bookingStart', bookingStart.toISOString());
+      pm.collectionVariables.set('availabilityEnd', availabilityEnd.toISOString());

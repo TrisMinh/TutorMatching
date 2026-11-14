@@ -1,0 +1,27 @@
+@startuml search-sequence
+!include _style.puml
+title Search Available Tutors - Gateway Composition
+autonumber
+actor Student
+participant "React Web" as Web
+participant "Gateway BFF" as GW
+participant "Tutor Service" as Tutor
+participant "Scheduling Service" as Scheduling
+
+Student -> Web : chọn subject + date + timezone
+Web -> GW : GET /api/v1/search/available-tutors
+GW -> GW : validate JWT/query, UTC day bounds
+GW -> Tutor : GET tutor candidates (paged)
+Tutor --> GW : profiles + subjects + availability
+GW -> Scheduling : POST /internal/v1/slots/query\n<=100 tutorIds, <=7 days
+Scheduling --> GW : available slots grouped by tutorId
+GW -> GW : join by tutorId, preserve pagination
+GW --> Web : 200 results + generatedAtUtc
+Web --> Student : hiển thị snapshot
+
+note over GW,Scheduling
+Không N+1. Nếu dependency lỗi, trả 503; không giả danh sách trống.
+Kết quả search không thay thế bước tạo hold.
+end note
+@enduml
+

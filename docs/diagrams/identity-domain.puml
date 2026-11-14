@@ -1,0 +1,38 @@
+@startuml identity-domain
+!include _style.puml
+title Identity Domain
+
+class UserAccount <<Aggregate Root>> {
+  +Id: UUID
+  +Email: EmailAddress
+  +Role: Role
+  +Status: AccountStatus
+  +Register()
+  +VerifyPassword()
+  +Disable()
+}
+class RefreshSession <<Entity>> {
+  +Id: UUID
+  +FamilyId: UUID
+  +TokenHash: string
+  +ExpiresAtUtc: instant
+  +Rotate()
+  +RevokeFamily()
+}
+class EmailAddress <<Value Object>>
+enum Role {
+  Student
+  Tutor
+  Admin
+}
+enum AccountStatus {
+  Active
+  Disabled
+}
+
+UserAccount "1" *-- "0..*" RefreshSession
+UserAccount *-- EmailAddress
+UserAccount --> Role
+UserAccount --> AccountStatus
+@enduml
+

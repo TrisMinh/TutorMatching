@@ -1,0 +1,21 @@
+$kind: http-request
+name: Upsert tutor profile
+order: 7000
+url: '{{baseUrl}}/api/v1/tutors/me'
+method: PUT
+headers:
+  Content-Type: application/json
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{tutorToken}}'
+body:
+  type: json
+  content: |-
+    {"displayName":"Smoke Tutor","bio":"Tutor profile created by the repeatable smoke test.","experienceYears":5,"avatarUrl":null}
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('tutor profile saved', () => pm.response.to.have.status(200));
+      pm.collectionVariables.set('tutorId', pm.response.json().id);

@@ -1,0 +1,48 @@
+@startuml identity-database-schema
+!include _style.puml
+title identity_db - Physical Schema
+hide circle
+
+entity user_accounts {
+  * id : uuid <<PK>>
+  --
+  email : varchar(320)
+  normalized_email : varchar(320) <<UQ>>
+  password_hash : text
+  role : varchar(20) <<CHECK>>
+  status : varchar(20) <<CHECK>>
+  last_login_at_utc : timestamptz NULL
+  created_at_utc : timestamptz
+  updated_at_utc : timestamptz
+  version : integer
+}
+entity refresh_sessions {
+  * id : uuid <<PK>>
+  --
+  user_id : uuid <<FK>>
+  token_hash : char(64) <<UQ>>
+  family_id : uuid <<IDX>>
+  expires_at_utc : timestamptz
+  revoked_at_utc : timestamptz NULL
+  replaced_by_token_id : uuid NULL
+  created_at_utc : timestamptz
+}
+entity security_audit_events {
+  * id : uuid <<PK>>
+  --
+  user_id : uuid NULL <<FK>>
+  event_type : varchar(80)
+  ip_hash : char(64) NULL
+  user_agent_hash : char(64) NULL
+  occurred_at_utc : timestamptz
+}
+
+user_accounts ||--o{ refresh_sessions
+user_accounts |o--o{ security_audit_events
+note bottom
+UQ normalized_email; UQ token_hash.
+Indexes: refresh(user_id,expires_at_utc), refresh(family_id,revoked_at_utc),
+audit(user_id,occurred_at_utc). Raw refresh token không lưu.
+end note
+@enduml
+
