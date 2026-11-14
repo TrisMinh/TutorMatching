@@ -2,7 +2,6 @@ using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using TutorMatching.Tutor.Api.Domain;
 using TutorMatching.Tutor.Api.Infrastructure;
-using TutorMatching.BuildingBlocks.Security;
 
 namespace TutorMatching.Tutor.Api.Endpoints;
 
@@ -31,7 +30,7 @@ public static class TutorEndpoints
             .WithTags("Subjects");
 
         endpoints.MapGet("/internal/v1/tutors/{id:guid}/availability", ValidateAvailabilityAsync)
-            .RequireServiceCaller("scheduling")
+            .RequireAuthorization()
             .WithTags("Internal");
         return endpoints;
     }

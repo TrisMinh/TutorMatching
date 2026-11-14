@@ -38,7 +38,7 @@ Ba worker claim từng row bằng `FOR UPDATE SKIP LOCKED` trong transaction. Gi
 
 Backoff có jitter, tối đa 8 lỗi/event. Event exhausted vẫn unpublished để kiểm tra; sửa nguyên nhân rồi `node scripts/replay-outbox.mjs <event-uuid>`. Script chỉ reset event exhausted/chưa published, không tạo ID mới. Lỗi kết nối broker trước claim không đốt số lần của từng event.
 
-Secure profile ký event, consumer verify trước inbox/project. Signature không thay retry/idempotency. Inbox + transaction chống duplicate; advisory lock theo booking và kiểm cancellation tránh reminder tái sinh khi event đến ngược thứ tự.
+Bản đồ án không ký event ở message level; broker và mạng Docker là hạ tầng demo nội bộ. Inbox + transaction chống duplicate; advisory lock theo booking và kiểm cancellation tránh reminder tái sinh khi event đến ngược thứ tự.
 
 ## Vì sao chưa thêm Saga?
 

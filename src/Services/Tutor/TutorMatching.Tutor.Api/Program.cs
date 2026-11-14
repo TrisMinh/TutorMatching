@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using TutorMatching.BuildingBlocks.Hosting;
 using TutorMatching.Tutor.Api.Endpoints;
 using TutorMatching.Tutor.Api.Infrastructure;
-using TutorMatching.BuildingBlocks.Security;
 
 var builder = WebApplication.CreateBuilder(args)
     .AddTutorMatchingApi("tutor");
@@ -11,9 +10,9 @@ builder.Services.AddDbContext<TutorDbContext>(options =>
         ?? "Host=localhost;Port=54322;Database=tutor_db;Username=tutor_app;Password=tutor_dev"));
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddHttpClient();
-builder.Services.AddHttpClient("student",client=>client.BaseAddress=new Uri(builder.Configuration["Services:Student"]??"http://student-service:8080")).ConfigurePrimaryHttpMessageHandler(()=>WorkloadTls.HttpHandler(builder.Configuration,"student"));
-builder.Services.AddHttpClient("scheduling",client=>client.BaseAddress=new Uri(builder.Configuration["Services:Scheduling"]??"http://scheduling-service:8080")).ConfigurePrimaryHttpMessageHandler(()=>WorkloadTls.HttpHandler(builder.Configuration,"scheduling"));
-builder.Services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(_=>SecurityRedis.Connect(builder.Configuration));
+builder.Services.AddHttpClient("student",client=>client.BaseAddress=new Uri(builder.Configuration["Services:Student"]??"http://student-service:8080"));
+builder.Services.AddHttpClient("scheduling",client=>client.BaseAddress=new Uri(builder.Configuration["Services:Scheduling"]??"http://scheduling-service:8080"));
+builder.Services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(_=>StackExchange.Redis.ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("Redis")??"redis:6379,abortConnect=false"));
 builder.Services.AddDependencyReadiness("database",(sp,ct)=>sp.GetRequiredService<TutorDbContext>().Database.CanConnectAsync(ct));
 builder.Services.AddDependencyReadiness("redis",async(sp,ct)=>{await sp.GetRequiredService<StackExchange.Redis.IConnectionMultiplexer>().GetDatabase().PingAsync().WaitAsync(ct);return true;});
 var app = builder.Build();

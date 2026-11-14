@@ -1,7 +1,5 @@
 # Security hardening
 
-> Đây là checklist mục tiêu, không phải mọi control đã hoàn thành. Trạng thái code/Docker và giới hạn: [Service Security](README.md), [bằng chứng kiểm thử](verification.md).
-
 ## Threat model ngắn
 
 Tài sản chính: account/token, PII profile, booking integrity, availability, notification content và credentials hạ tầng. Entry points: Gateway/API, auth, uploaded/URL fields, AMQP messages, management UIs, container images và logs. Attacker gồm anonymous, authenticated user vượt quyền, compromised service/container và dependency supply chain.

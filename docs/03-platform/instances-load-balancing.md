@@ -16,19 +16,19 @@ Tổng **8 API/Gateway**, không phải 18. Nginx, HAProxy, mỗi PostgreSQL, Re
 ## Cấu hình có thể tái tạo
 
 ```powershell
-docker compose -f compose.yaml -f compose.ha.yaml -f compose.security.yaml up -d --build --wait
-docker compose -f compose.yaml -f compose.ha.yaml -f compose.security.yaml ps
+docker compose -f compose.yaml -f compose.ha.yaml up -d --build --wait
+docker compose -f compose.yaml -f compose.ha.yaml ps
 ```
 
-Nên dùng `scripts/start-ha.ps1` để sinh security material và provision broker. `compose.ha.yaml` đặt một replica cho các nhóm khác, chỉ override Scheduling thành ba; secure overlay không tăng replica. Giữ đủ ba file để không vô tình chạy profile thiếu TLS/ACL.
+Nên dùng `scripts/start-ha.ps1` để khởi động demo bằng Compose/.env. `compose.ha.yaml` đặt một replica cho các nhóm khác, chỉ override Scheduling thành ba; overlay HA không tăng replica. Không cần certificate, PKI hoặc Python cryptography cho startup.
 
 ## Thuật toán điều phối
 
 HAProxy dùng **least connections**: chọn server UP có ít kết nối đang xử lý nhất; cân bằng giữa server bằng nhau. Docker DNS cập nhật IP; server-template có 3 slot Scheduling, 1 slot mỗi nhóm khác. Không sticky session.
 
-Secure profile dùng TCP passthrough cho pool nội bộ, giữ mTLS caller tới API đích. Vì vậy điều phối ở **mức kết nối**, không hứa mỗi request luân phiên server. Gateway gọi HTTP/1.1 tới các API, pooled connection lifetime 15 giây; một kết nối có thể được tái sử dụng. Named HttpClient khác có pool riêng.
+Bản đồ án dùng HTTP nội bộ và HAProxy leastconn, không dùng TLS passthrough/mTLS. Không hứa mỗi request luân phiên server khi có connection pooling; kiểm tra phân phối bằng instance header và nhiều request đồng thời.
 
-Health readiness mỗi giây, fall=2/rise=2; thời gian phát hiện còn phụ thuộc timeout check 3 giây. Không gọi đây là failover tức thời. HTTP API chỉ cho health probe; request nghiệp vụ phải mTLS.
+Health readiness mỗi giây, fall=2/rise=2; thời gian phát hiện còn phụ thuộc timeout check 3 giây. Không gọi đây là failover tức thời. API health là HTTP; endpoint nghiệp vụ được bảo vệ bằng JWT/role/owner.
 
 ## Một Scheduling chết thì sao?
 
@@ -42,6 +42,6 @@ Ba Scheduling dùng cùng SchedulingDb, không có ba database độc lập cầ
 
 ## Kiểm chứng và giới hạn
 
-`verify-ha.mjs`: số hostname đúng 1/1/1/1/3/1; hard-kill một Scheduling; thêm 36 request qua survivors; node tái nhập. `verify-tutor-workflow.mjs` với HA_CHAOS kiểm hold/replay trên node khác. `verify-security.mjs` kiểm revoke trực tiếp cả ba replica qua mTLS.
+`verify-ha.mjs`: số hostname đúng 1/1/1/1/3/1; hard-kill một Scheduling; thêm 36 request qua survivors; node tái nhập. `verify-tutor-workflow.mjs` với HA_CHAOS kiểm hold/replay trên node khác. Bản này không có kiểm tra thu hồi access token tức thời hay mTLS.
 
 Không cố tắt service một instance rồi tuyên bố failover. Gateway, Identity, Tutor, Student, Notification, HAProxy, host và datastore vẫn đơn node. Compose không có automatic rolling update/image rollback. Xem [retry/recovery](retry-rollback-recovery.md) cho lock TTL và transaction.

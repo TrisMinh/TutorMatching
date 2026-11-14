@@ -25,7 +25,7 @@ public sealed class TokenService(JwtOptions options, TimeProvider timeProvider)
 
         var now = timeProvider.GetUtcNow();
         var accessExpiry = now.AddMinutes(options.AccessTokenMinutes);
-        var credentials = JwtKeyMaterial.SigningCredentials(options);
+        var credentials = new SigningCredentials(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(options.SigningKey)), SecurityAlgorithms.HmacSha256);
         var family = sessionId ?? Guid.NewGuid();
         var claims = new[]
         {
@@ -34,7 +34,6 @@ public sealed class TokenService(JwtOptions options, TimeProvider timeProvider)
             new Claim("role", account.Role.ToString()),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             new Claim("sid", family.ToString()),
-            new Claim("issued_ms", now.ToUnixTimeMilliseconds().ToString(System.Globalization.CultureInfo.InvariantCulture)),
         };
         var jwt = new JwtSecurityToken(
             issuer: options.Issuer,

@@ -1,13 +1,5 @@
 # Course API
 
-## Secure deployment contract (14 November 2026)
-
-The secure overlay uses RS256, pinned algorithm/issuer/audience/lifetime, per-API Redis revocation checks, and mTLS caller identity for internal routes. Public JSON contracts and owner checks remain compatible. Identity alone receives the JWT private key. GET/POST user-context requests are not authorized merely by possession of a valid workload certificate.
-
-`POST /api/v1/auth/revoke` revokes the access-token family in Redis as well as refresh state; `POST /api/v1/auth/revoke-all` requires authentication and targets only JWT sub. `POST /api/v1/users/{userId}/disable` is Admin-only and invalidates access/refresh while disabling login. Revoked tokens return 401; unavailable revocation checking fails closed with 503. Auth has a basic shared-proxy-source rate limit (429), not a claimed distributed per-user limit.
-
-Internal Student lookup and Tutor availability require Scheduling certificate plus valid user JWT; internal slot batch query requires Gateway certificate plus JWT. Public ingress rejects `/internal/*`. HTTPS local endpoints are 3443 (web) and 8443 (API); HTTP 3000/8080 remains explicitly loopback-only demo compatibility. See [service security report](../docs/04-security/README.md) for exact guarantees and limitations.
-
 Courses persist in TutorDb. Course.tutorId references a tutor profile; sessions and enrollments reference their course. Enrollment identity is the authenticated student user ID, never a client-supplied identity.
 
 - GET /api/v1/courses: public catalog, instructor, enrollment count and sessions.

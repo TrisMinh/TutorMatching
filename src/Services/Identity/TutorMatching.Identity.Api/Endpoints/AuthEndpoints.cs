@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore;
 using TutorMatching.Identity.Api.Domain;
 using TutorMatching.Identity.Api.Infrastructure;
 using TutorMatching.Identity.Api.Security;
-using TutorMatching.BuildingBlocks.Security;
 
 namespace TutorMatching.Identity.Api.Endpoints;
 
@@ -18,14 +17,6 @@ public static class AuthEndpoints
         group.MapPost("/login", LoginAsync).AllowAnonymous();
         group.MapPost("/refresh", RefreshAsync).AllowAnonymous();
         group.MapPost("/revoke", RevokeAsync).AllowAnonymous();
-        group.MapPost("/revoke-all", async(ClaimsPrincipal user,IdentityDbContext db,AccessRevocation revocation,CancellationToken ct)=>{
-            var id=Guid.Parse(user.FindFirstValue("sub")!);
-            var sessions=await db.RefreshSessions.Where(s=>s.UserId==id&&s.RevokedAtUtc==null).ToListAsync(ct);
-            await revocation.RevokeUserAsync(id);
-            foreach(var session in sessions){await revocation.RevokeFamilyAsync(session.FamilyId);session.Revoke(DateTimeOffset.UtcNow);}
-            await db.SaveChangesAsync(ct);return Results.NoContent();
-        }).RequireAuthorization();
-
         endpoints.MapGet("/api/v1/users/me", (ClaimsPrincipal principal) =>
             Results.Ok(new
             {
@@ -35,21 +26,11 @@ public static class AuthEndpoints
             }))
             .RequireAuthorization()
             .WithTags("Users");
-        endpoints.MapPost("/api/v1/users/{userId:guid}/disable", async(Guid userId,IdentityDbContext db,AccessRevocation revocation,CancellationToken ct)=>{
-            var account=await db.UserAccounts.FindAsync([userId],ct);
-            if(account is null)return Results.NotFound();
-            await revocation.RevokeUserAsync(userId);
-            var sessions=await db.RefreshSessions.Where(s=>s.UserId==userId&&s.RevokedAtUtc==null).ToListAsync(ct);
-            foreach(var session in sessions){await revocation.RevokeFamilyAsync(session.FamilyId);session.Revoke(DateTimeOffset.UtcNow);}
-            account.Disable(DateTimeOffset.UtcNow);await db.SaveChangesAsync(ct);return Results.NoContent();
-        }).RequireAuthorization(policy=>policy.RequireRole("Admin")).WithTags("Users");
-
         return endpoints;
     }
 
     private static async Task<IResult> RegisterAsync(
         RegisterRequest request,
-        HttpContext context,
         IdentityDbContext dbContext,
         IPasswordHasher<string> passwordHasher,
         TimeProvider timeProvider,
@@ -90,7 +71,6 @@ public static class AuthEndpoints
             var account = UserAccount.Register(request.Email, passwordHash, role, timeProvider.GetUtcNow());
             dbContext.UserAccounts.Add(account);
             await dbContext.SaveChangesAsync(cancellationToken);
-            context.Items["audit-result-id"]=account.Id.ToString();
             return Results.Created($"/api/v1/users/{account.Id}", new
             {
                 account.Id,
@@ -114,7 +94,6 @@ public static class AuthEndpoints
 
     private static async Task<IResult> LoginAsync(
         LoginRequest request,
-        HttpContext context,
         IdentityDbContext dbContext,
         IPasswordHasher<string> passwordHasher,
         TokenService tokenService,
@@ -139,7 +118,6 @@ public static class AuthEndpoints
         }
 
         var pair = tokenService.Issue(account);
-        context.Items["audit-actor-id"]=account.Id.ToString();context.Items["audit-actor-role"]=account.Role.ToString();
         account.RecordLogin(timeProvider.GetUtcNow());
         dbContext.RefreshSessions.Add(RefreshSession.Create(
             account.Id,
@@ -153,10 +131,8 @@ public static class AuthEndpoints
 
     private static async Task<IResult> RefreshAsync(
         RefreshRequest request,
-        HttpContext context,
         IdentityDbContext dbContext,
         TokenService tokenService,
-        AccessRevocation revocation,
         TimeProvider timeProvider,
         CancellationToken cancellationToken)
     {
@@ -173,9 +149,8 @@ public static class AuthEndpoints
             return Unauthorized();
         }
 
-        if (!session.IsActive(now) || await revocation.IsFamilyRevokedAsync(session.FamilyId))
+        if (!session.IsActive(now))
         {
-            await revocation.RevokeFamilyAsync(session.FamilyId);
             var family = await dbContext.RefreshSessions
                 .Where(candidate => candidate.FamilyId == session.FamilyId)
                 .ToListAsync(cancellationToken);
@@ -196,7 +171,6 @@ public static class AuthEndpoints
         }
 
         var pair = tokenService.Issue(account, session.FamilyId);
-        context.Items["audit-actor-id"]=account.Id.ToString();context.Items["audit-actor-role"]=account.Role.ToString();
         var replacement = session.Rotate(pair.RefreshTokenHash, now, pair.RefreshTokenExpiresAtUtc);
         dbContext.RefreshSessions.Add(replacement);
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -206,9 +180,7 @@ public static class AuthEndpoints
 
     private static async Task<IResult> RevokeAsync(
         RefreshRequest request,
-        HttpContext context,
         IdentityDbContext dbContext,
-        AccessRevocation revocation,
         TimeProvider timeProvider,
         CancellationToken cancellationToken)
     {
@@ -219,7 +191,7 @@ public static class AuthEndpoints
         var session = await dbContext.RefreshSessions.SingleOrDefaultAsync(
             candidate => candidate.TokenHash == hash,
             cancellationToken);
-        if(session is not null){context.Items["audit-actor-id"]=session.UserId.ToString();await revocation.RevokeFamilyAsync(session.FamilyId);session.Revoke(timeProvider.GetUtcNow());}
+        session?.Revoke(timeProvider.GetUtcNow());
         await dbContext.SaveChangesAsync(cancellationToken);
         if (transaction is not null) await transaction.CommitAsync(cancellationToken);
         return Results.NoContent();

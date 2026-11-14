@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
-const compose=['compose','-f','compose.yaml','-f','compose.ha.yaml','-f','compose.security.yaml'];
+const compose=['compose','-f','compose.yaml','-f','compose.ha.yaml'];
 const base='http://localhost:8080';
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const docker=(...args)=>execFileSync('docker',args,{encoding:'utf8'}).trim();

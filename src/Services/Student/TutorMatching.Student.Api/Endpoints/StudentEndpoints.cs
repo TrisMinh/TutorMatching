@@ -2,7 +2,6 @@ using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using TutorMatching.Student.Api.Domain;
 using TutorMatching.Student.Api.Infrastructure;
-using TutorMatching.BuildingBlocks.Security;
 
 namespace TutorMatching.Student.Api.Endpoints;
 
@@ -17,7 +16,7 @@ public static class StudentEndpoints
         group.MapPut("/me/interests", ReplaceInterestsAsync);
 
         endpoints.MapGet("/internal/v1/students/by-user/{userId:guid}", GetByUserIdAsync)
-            .RequireServiceCaller("scheduling")
+            .RequireAuthorization()
             .WithTags("Internal");
         return endpoints;
     }

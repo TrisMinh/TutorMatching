@@ -1,12 +1,13 @@
 # Bộ tài liệu kỹ thuật TutorMatching
 
+Báo cáo theo đề bài hiện hành: [Scheduling & Time Constraints](coursework/README.md).
+Các file trong `coursework` mô tả phạm vi đã triển khai; các checklist nền tảng bên dưới có thể bao gồm hướng mở rộng.
+
 Đây là tài liệu triển khai chuẩn cho nền tảng ghép cặp gia sư và học sinh theo khung giờ. Một kỹ sư mới phải có thể dùng bộ tài liệu này để tạo solution, database, API, hạ tầng cục bộ, kiểm thử và demo mà không cần tự quyết lại kiến trúc.
 
 Từ **PHẢI**, **KHÔNG ĐƯỢC**, **NÊN** và **CÓ THỂ** mang nghĩa quy chuẩn. Nếu code khác tài liệu, thay đổi phải đi qua ADR và cập nhật đồng thời API hoặc event contract liên quan.
 
 ## Đọc theo vai trò
-
-**Báo cáo triển khai hiện hành:** [Service Security — các chương tách riêng](04-security/README.md), [instance và điều phối Scheduling](03-platform/instances-load-balancing.md), [retry/rollback/recovery](03-platform/retry-rollback-recovery.md), [secure Docker runbook](05-operations/secure-docker-runbook.md). Baseline HS256 đã được thay thế trong secure profile; xem ADR 013.
 
 | Vai trò | Bắt đầu tại |
 |---|---|

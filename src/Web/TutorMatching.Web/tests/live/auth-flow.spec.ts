@@ -21,8 +21,11 @@ test('student can register, sign in, log out, and cannot reopen a protected rout
   await page.goto('/student/complete-profile');
   await page.getByRole('button', { name: 'Save & continue' }).click();
   await expect(page.getByRole('heading').filter({ hasText: 'Find the right tutor' })).toBeVisible();
+  await page.getByRole('combobox', { name: 'Subject', exact: true }).click();
+  await page.getByRole('option', { name: 'Mathematics', exact: true }).click();
   const availabilityResponse = page.waitForResponse((response) => response.url().includes('/api/v1/search/available-tutors'));
-  await page.getByRole('button', { name: 'Available today' }).click();
+  await page.getByRole('combobox', { name: 'Availability', exact: true }).click();
+  await page.getByRole('option', { name: 'Available today', exact: true }).click();
   expect((await availabilityResponse).status()).toBe(200);
 
   await page.getByRole('button', { name: 'Log out' }).click();

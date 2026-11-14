@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using TutorMatching.Scheduling.Api.Domain;
 using TutorMatching.Scheduling.Api.Infrastructure;
-using TutorMatching.BuildingBlocks.Security;
 
 namespace TutorMatching.Scheduling.Api.Endpoints;
 
@@ -42,7 +41,7 @@ public static class BookingEndpoints
         group.MapDelete("/{bookingId:guid}", CancelAsync);
 
         endpoints.MapPost("/internal/v1/slots/query", QueryBookedSlotsAsync)
-            .RequireServiceCaller("gateway")
+            .RequireAuthorization()
             .WithTags("Internal");
         return endpoints;
     }
@@ -156,7 +155,6 @@ public static class BookingEndpoints
             if(existing.StudentUserId!=GetUserId(principal))return Results.NotFound();
             if(existing.SourceHoldTokenHash is null||string.IsNullOrWhiteSpace(request.HoldToken)||!CryptographicOperations.FixedTimeEquals(System.Text.Encoding.UTF8.GetBytes(existing.SourceHoldTokenHash),System.Text.Encoding.UTF8.GetBytes(RedisBookingHoldStore.HashToken(request.HoldToken))))
                 return Results.Conflict(new{error="Cannot verify the original booking operation."});
-            httpContext.Items["audit-result-id"]=existing.Id.ToString();
             return Results.Ok(ToResponse(existing));
         }
 
@@ -207,7 +205,6 @@ public static class BookingEndpoints
             return Results.Conflict(new { error = "Slot conflicts with a confirmed booking." });
         }
 
-        httpContext.Items["audit-result-id"]=booking.Id.ToString();
         try{await holdStore.ReleaseAsync(hold, cancellationToken);}
         catch(Exception exception) when(exception is StackExchange.Redis.RedisException or OperationCanceledException){
             LogCleanupFailure(httpContext.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("BookingCleanup"),exception);

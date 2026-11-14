@@ -2,7 +2,9 @@
 import json,os,subprocess,uuid
 from pathlib import Path
 root=Path(__file__).resolve().parents[1]
-credentials=json.loads((root/'.security/secrets.json').read_text())
+env_file=root/'.env'
+settings={line.split('=',1)[0]:line.split('=',1)[1] for line in env_file.read_text().splitlines() if '=' in line and not line.startswith('#')} if env_file.exists() else {}
+credentials={'db-'+name:settings.get('POSTGRES_'+name.upper()+'_PASSWORD',name+'_dev') for name in ['scheduling','notification']}
 proxies=[]
 def docker(*args):
     result=subprocess.run(['docker',*args],capture_output=True,text=True,cwd=root)

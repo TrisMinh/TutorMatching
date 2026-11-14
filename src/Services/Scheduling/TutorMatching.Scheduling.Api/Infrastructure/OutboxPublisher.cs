@@ -1,7 +1,6 @@
 using System.Text;
 using Microsoft.EntityFrameworkCore;
 using RabbitMQ.Client;
-using TutorMatching.BuildingBlocks.Security;
 
 namespace TutorMatching.Scheduling.Api.Infrastructure;
 
@@ -41,11 +40,6 @@ public sealed partial class OutboxPublisher(
                 ?? "amqp://guest:guest@localhost:5672/"),
             AutomaticRecoveryEnabled = true,
         };
-        if(factory.Ssl.Enabled&&WorkloadTls.Enabled(configuration)){
-            factory.Ssl.ServerName="rabbitmq";
-            factory.Ssl.Certs=[WorkloadTls.ClientCertificate(configuration)];
-            factory.Ssl.CertificateValidationCallback=(_,certificate,_,errors)=>WorkloadTls.ValidateServer(certificate,errors,configuration,"rabbitmq");
-        }
         await using var connection = await factory.CreateConnectionAsync("scheduling-outbox", cancellationToken);
         await using var channel = await connection.CreateChannelAsync(
             new CreateChannelOptions(publisherConfirmationsEnabled: true, publisherConfirmationTrackingEnabled: true),
@@ -81,10 +75,6 @@ public sealed partial class OutboxPublisher(
                 };
                 using var publishTimeout=CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);publishTimeout.CancelAfter(TimeSpan.FromSeconds(5));
                 var payload=Encoding.UTF8.GetBytes(message.Payload);
-                if(configuration.GetValue<bool>("Security:Messaging:RequireSignature")){
-                    var proof=MessageAuthentication.Sign(configuration,message.Id.ToString(),message.EventType,message.EventVersion,message.RoutingKey,message.CorrelationId.ToString(),payload);
-                    properties.Headers!["x-key-id"]=proof.KeyId;properties.Headers["x-signed-at"]=proof.SignedAt;properties.Headers["x-signature"]=proof.Signature;
-                }
                 await channel.BasicPublishAsync(
                     ExchangeName,
                     message.RoutingKey,
