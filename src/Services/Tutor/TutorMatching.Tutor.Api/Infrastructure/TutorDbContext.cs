@@ -12,6 +12,7 @@ public sealed class TutorDbContext(DbContextOptions<TutorDbContext> options) : D
     public DbSet<CourseSession> CourseSessions => Set<CourseSession>();
     public DbSet<CourseEnrollment> CourseEnrollments => Set<CourseEnrollment>();
     public DbSet<EnrollmentNotice> EnrollmentNotices => Set<EnrollmentNotice>();
+    public DbSet<CourseLifecycleNotice> CourseLifecycleNotices => Set<CourseLifecycleNotice>();
     public DbSet<TutorSubject> TutorSubjects => Set<TutorSubject>();
     public DbSet<AvailabilityWindow> AvailabilityWindows => Set<AvailabilityWindow>();
 
@@ -22,6 +23,17 @@ public sealed class TutorDbContext(DbContextOptions<TutorDbContext> options) : D
         courses.HasKey(c => c.Id);
         courses.Property(c => c.Id).HasMaxLength(100);
         courses.Property(c => c.Title).HasMaxLength(160);
+        courses.Property(c => c.Status).HasMaxLength(20);
+        courses.Property(c => c.Version).IsConcurrencyToken();
+        courses.Property(c => c.CancellationReason).HasMaxLength(300);
+        var lifecycle = modelBuilder.Entity<CourseLifecycleNotice>();
+        lifecycle.ToTable("course_lifecycle_notices");lifecycle.HasKey(n=>n.Id);
+        lifecycle.Property(n=>n.CourseId).HasMaxLength(100);
+        lifecycle.Property(n=>n.Type).HasMaxLength(50);lifecycle.Property(n=>n.Title).HasMaxLength(200);
+        lifecycle.Property(n=>n.Body).HasMaxLength(1000);lifecycle.Property(n=>n.ActorName).HasMaxLength(160);
+        lifecycle.Property(n=>n.AvatarUrl).HasMaxLength(2000000);
+        lifecycle.HasIndex(n=>new{n.RecipientUserId,n.CreatedAtUtc});
+        lifecycle.HasOne<Course>().WithMany().HasForeignKey(n=>n.CourseId).OnDelete(DeleteBehavior.Cascade);
         courses.HasOne<TutorProfile>().WithMany().HasForeignKey(c => c.TutorId).OnDelete(DeleteBehavior.Restrict);
         courses.HasMany(c => c.Sessions).WithOne().HasForeignKey(s => s.CourseId);
         courses.HasMany(c => c.Enrollments).WithOne().HasForeignKey(e => e.CourseId);

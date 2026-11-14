@@ -37,6 +37,8 @@ TutorMatching cho phép học sinh tìm gia sư theo môn và thời gian, giữ
 
 ## Ngoài phạm vi bản đầu
 
+- Xác thực hai bước (2FA) và xóa tài khoản: đã loại khỏi yêu cầu theo quyết định người dùng, không nằm trong backlog.
+
 - Thanh toán, hóa đơn, hoàn tiền.
 - Video call, chat thời gian thực.
 - AI recommendation, xếp hạng phức tạp.

@@ -1,0 +1,10 @@
+# Course lifecycle
+
+2FA and account deletion are explicitly out of scope, not pending features.
+
+- Course persisted status Open/Closed/Cancelled, version starts 1; Completed is derived after last session ends. Status and cancellation reason/timestamp included in list/detail/mine. Active enrollment count excludes WithdrawnAtUtc. Mine retains cancelled courses for history, excludes withdrawn enrollments.
+- Tutor owner PUT `/api/v1/courses/{id}/status` {status,reason?,version}. Open↔Closed only before first session. Cancelled allowed while any session remains, reason 1–300 required, irreversible; completed course cannot change. Cancelled courses preserve sessions/enrollments and release future conflicts/calendar/reminders. Changes transactionally create participant notices. Repeat requested current state succeeds without duplicate notice; stale version for actual change is 409. No delete endpoint.
+- Student DELETE `/api/v1/courses/{id}/enrollments/me` before first session. Soft withdrawal, idempotent, active count decreases, future calendar/reminders released, notice to Tutor in same transaction. After start 409; cancelled course already inactive returns 204. Re-enrollment before start allowed only if course Open, capacity available and conflict revalidated; prior row reactivated. A notice remains one enrollment notice per course/student, refreshed on re-enrollment.
+- Enrollment rejects Closed/Cancelled or first session already started; repeated active enrollment succeeds. Closed sessions continue to block conflicts and reminders.
+- GET `/api/v1/courses/lifecycle-notifications`, PUT `/{id}/read` owner-only; source stored in Tutor DB. Frontend merges these with existing notification sources; no cross-DB writes. Cancelled-course notice opens preserved course detail. In-app opt-out honored. No payment/refund/email-cancellation promise.
+- Global schedule write lock and serializable transaction serialize create/enroll/withdraw/status changes. UI confirms cancellation/withdrawal and refreshes catalog/mine; backend never trusts disabled UI buttons as enforcement.

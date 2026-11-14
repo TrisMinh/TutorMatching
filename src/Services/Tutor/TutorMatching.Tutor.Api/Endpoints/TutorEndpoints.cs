@@ -186,7 +186,7 @@ public static class TutorEndpoints
                 profile.Id,
                 profile.UserId,
                 valid = profile.Status == TutorStatus.Active
-                    && !dbContext.CourseSessions.Any(session=>session.StartAtUtc<endAtUtc&&startAtUtc<session.EndAtUtc&&(dbContext.Courses.Any(course=>course.Id==session.CourseId&&course.TutorId==id)||dbContext.CourseEnrollments.Any(enrollment=>enrollment.CourseId==session.CourseId&&enrollment.StudentUserId==GetUserId(principal))))
+                    && !dbContext.CourseSessions.Any(session=>session.StartAtUtc<endAtUtc&&startAtUtc<session.EndAtUtc&&(dbContext.Courses.Any(course=>course.Id==session.CourseId&&course.TutorId==id&&course.Status!="Cancelled")||dbContext.CourseEnrollments.Any(enrollment=>enrollment.CourseId==session.CourseId&&enrollment.StudentUserId==GetUserId(principal)&&enrollment.WithdrawnAtUtc==null&&dbContext.Courses.Any(c=>c.Id==session.CourseId&&c.Status!="Cancelled"))))
                     && profile.Subjects.Any(subject => subject.SubjectId == subjectId)
                     && profile.AvailabilityWindows.Any(window => window.StartAtUtc <= startAtUtc && window.EndAtUtc >= endAtUtc),
             })

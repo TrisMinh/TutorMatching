@@ -18,6 +18,8 @@ Từ **PHẢI**, **KHÔNG ĐƯỢC**, **NÊN** và **CÓ THỂ** mang nghĩa quy
 | QA | [Test strategy](06-testing/test-strategy.md), [E2E scenarios](06-testing/e2e-scenarios.md) |
 | Người demo/vận hành | [Runbook](05-operations/runbook.md), [Sơ đồ](diagrams/README.md) |
 
+[Vòng đời khóa học: trạng thái, ràng buộc, thông báo và kiểm thử](02-services/course-lifecycle.md).
+
 ## Account experience đã tích hợp
 
 - [Settings và hiệu lực nghiệp vụ](08-account-experience/settings.md)

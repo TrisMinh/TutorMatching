@@ -1,3 +1,4 @@
+import {CourseTicker} from './CourseTicker';
 import { createContext, useContext, useEffect, useLayoutEffect, useState, type ReactNode, type Dispatch, type SetStateAction } from 'react';
 import { Outlet } from 'react-router-dom';
 import { gatewayClient } from '../api';
@@ -134,6 +135,7 @@ function AppShellFrame({ active, children, contentClassName = '', mode = 'studen
             {quickPanel === 'messages' ? <div className="student-quick-panel" role="dialog" aria-label="Recent messages"><strong>Recent messages</strong><p>No unread messages right now.</p><MotionLink to={isTutor ? '/tutor/requests' : '/student/bookings'}>View conversations</MotionLink></div> : null}
           </div>
         </header>
+        <CourseTicker mode={mode}/>
         <main className={`student-content ${contentClassName}`.trim()}>{children}</main>
       </section>
       <nav className="student-mobile-nav" aria-label="Mobile student navigation" style={{gridTemplateColumns:`repeat(${mobileNavigation.length},minmax(0,1fr))`}}>

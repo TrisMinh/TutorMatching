@@ -68,6 +68,13 @@ namespace TutorMatching.Tutor.Api.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<string>("CancellationReason")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<DateTimeOffset?>("CancelledAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<int>("Capacity")
                         .HasColumnType("integer");
 
@@ -83,6 +90,11 @@ namespace TutorMatching.Tutor.Api.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(160)
@@ -90,6 +102,10 @@ namespace TutorMatching.Tutor.Api.Infrastructure.Migrations
 
                     b.Property<Guid>("TutorId")
                         .HasColumnType("uuid");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -112,9 +128,65 @@ namespace TutorMatching.Tutor.Api.Infrastructure.Migrations
                     b.Property<DateTimeOffset>("EnrolledAtUtc")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTimeOffset?>("WithdrawnAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
                     b.HasKey("CourseId", "StudentUserId");
 
                     b.ToTable("course_enrollments", (string)null);
+                });
+
+            modelBuilder.Entity("TutorMatching.Tutor.Api.Domain.CourseLifecycleNotice", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ActorName")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<string>("AvatarUrl")
+                        .HasMaxLength(2000000)
+                        .HasColumnType("character varying(2000000)");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("CourseId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("ReadAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("RecipientUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CourseId");
+
+                    b.HasIndex("RecipientUserId", "CreatedAtUtc");
+
+                    b.ToTable("course_lifecycle_notices", (string)null);
                 });
 
             modelBuilder.Entity("TutorMatching.Tutor.Api.Domain.CourseSession", b =>
@@ -331,6 +403,15 @@ namespace TutorMatching.Tutor.Api.Infrastructure.Migrations
                 {
                     b.HasOne("TutorMatching.Tutor.Api.Domain.Course", null)
                         .WithMany("Enrollments")
+                        .HasForeignKey("CourseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("TutorMatching.Tutor.Api.Domain.CourseLifecycleNotice", b =>
+                {
+                    b.HasOne("TutorMatching.Tutor.Api.Domain.Course", null)
+                        .WithMany()
                         .HasForeignKey("CourseId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();

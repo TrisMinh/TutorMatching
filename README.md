@@ -7,6 +7,7 @@ Nền tảng ghép cặp gia sư và học sinh theo khung giờ, kết hợp đ
 ## Chức năng chính
 
 - **Student:** tìm gia sư theo môn và thời gian trống, giữ chỗ và xác nhận booking, đăng ký khóa học, xem khóa đã đăng ký và lịch học cá nhân.
+- **Vòng đời khóa:** đóng/mở đăng ký, hủy khóa có thông báo, Student rút đăng ký trước buổi đầu; giữ lịch sử và giải phóng lịch đúng trạng thái.
 - **Tutor:** xem lịch dạy và booking, cấu hình availability, xem khóa đang dạy và hồ sơ học sinh có liên quan.
 - **Lịch:** hiển thị booking và session khóa học theo ngày/tuần, chọn ngày từ lịch nhỏ, đổi múi giờ và chuyển đến buổi học của khóa đã chọn.
 - **Tương tác:** tìm kiếm có gợi ý, thông báo dropdown, toast, bộ lọc và chọn kích thước thẻ khóa học; điều hướng giữ nguyên app shell.
@@ -152,6 +153,7 @@ python scripts/verify-database-recovery.py
 | Lỗi, retry và rollback | [Retry & recovery](docs/03-platform/retry-rollback-recovery.md) |
 | Kịch bản trình bày | [Demo và kiểm chứng](docs/coursework/demo-and-verification.md) |
 | Settings, recovery, reminder và policy | [Account experience](docs/08-account-experience/settings.md) |
+| Quản lý vòng đời khóa học | [Course lifecycle](docs/02-services/course-lifecycle.md) |
 | Danh mục toàn bộ tài liệu | [Docs index](docs/README.md) |
 
 ## Các nhánh

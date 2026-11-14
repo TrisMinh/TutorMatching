@@ -1,3 +1,4 @@
+import {CourseLifecycleActions,courseState} from '../../shared/CourseLifecycleActions';
 import {AccountSettingsPanel} from '../../shared/AccountSettingsPanel';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
@@ -79,7 +80,7 @@ export function TemplateDashboardReference({mode='student',active='dashboard'}:{
       tutorId:b.tutorId,instructor:'Private lesson',image:'/assets/figma/student-tutor-1.jpg',category:'Booking',description:'Confirmed private booking',capacity:1,enrolled:1,
       sessions:[{id:b.id,startAtUtc:b.startAtUtc,endAtUtc:b.endAtUtc}],
     }));
-    return [...courses,...lessons];
+    return [...courses.filter(c=>c.status!=='Cancelled'),...lessons];
   },[]);
   const {data:personalSchedule,loading:scheduleLoading,error:scheduleError,reload:reloadSchedule}=useGatewayResource(loadPersonalSchedule,[]);
   const enrolledSchedule=personalSchedule.filter(item=>!item.id.startsWith('booking:'));
@@ -93,14 +94,14 @@ export function TemplateDashboardReference({mode='student',active='dashboard'}:{
   }
   const loadBookings = useCallback(() => gatewayClient.listBookings(), []);
   const { data: remoteBookings, loading, error, reload } = useGatewayResource<Booking[] | null>(loadBookings, null);
-  useEffect(()=>{if(!isTutor)return;const refresh=()=>{void reloadSchedule();void reload();void reloadCatalog();};window.addEventListener('focus',refresh);return()=>window.removeEventListener('focus',refresh);},[isTutor,reloadSchedule,reload,reloadCatalog]);
+  useEffect(()=>{const refresh=()=>{void reloadSchedule();void reload();void reloadCatalog();};window.addEventListener('focus',refresh);window.addEventListener('courses-changed',refresh);return()=>{window.removeEventListener('focus',refresh);window.removeEventListener('courses-changed',refresh);};},[reloadSchedule,reload,reloadCatalog]);
   const [weekOffset, setWeekOffset] = useState(0);
   const [courseFilter, setCourseFilter] = useState('All Course');
   const [courseSize,setCourseSize]=useState<'small'|'medium'|'large'>(()=>{const saved=window.localStorage.getItem('tutormatching.courseView');return saved==='small'||saved==='large'?saved:'medium';});
   const [selectedDate,setSelectedDate]=useState('');
   const [monthShift,setMonthShift]=useState(0);
   const [selectedEvent, setSelectedEvent] = useState('');
-  const upcomingCourseEvents=isTutor?realCourses.map(c=>({...c,sessions:[...c.sessions].filter(s=>+new Date(s.endAtUtc)>Date.now()).sort((a,b)=>a.startAtUtc.localeCompare(b.startAtUtc))})).filter(c=>c.sessions.length).sort((a,b)=>a.sessions[0].startAtUtc.localeCompare(b.sessions[0].startAtUtc)).slice(0,3):realCourses.filter(course=>['typography','figma-ui-design'].includes(course.id));
+  const upcomingCourseEvents=isTutor?realCourses.filter(c=>c.status!=='Cancelled').map(c=>({...c,sessions:[...c.sessions].filter(s=>+new Date(s.endAtUtc)>Date.now()).sort((a,b)=>a.startAtUtc.localeCompare(b.startAtUtc))})).filter(c=>c.sessions.length).sort((a,b)=>a.sessions[0].startAtUtc.localeCompare(b.sessions[0].startAtUtc)).slice(0,3):realCourses.filter(course=>['typography','figma-ui-design'].includes(course.id));
   const mockEvent = calendarEvents.find(event=>event.title===selectedEvent);
   const realEvent = realCourses.find(course=>course.title===selectedEvent);
   const firstSession = realEvent?.sessions[0];
@@ -190,9 +191,9 @@ export function TemplateDashboardReference({mode='student',active='dashboard'}:{
           <div className="legacy-tabs" role="tablist" aria-label="Course type">{courseTabs.map(tab=><button aria-selected={courseFilter===tab} className={courseFilter===tab?'is-active':''} key={tab} onClick={()=>setCourseFilter(tab)} role="tab" type="button">{tab}</button>)}</div>
           <div className="course-view-toolbar"><span>Course view</span><div role="group" aria-label="Course card size">{(['small','medium','large'] as const).map((size,index)=><button aria-label={`${size} cards`} title={`${size[0].toUpperCase()+size.slice(1)} cards`} aria-pressed={courseSize===size} key={size} onClick={()=>changeCourseSize(size)} type="button"><svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor" aria-hidden="true">{Array.from({length:3-index},(_,column)=>Array.from({length:2},(_,row)=><rect key={`${column}-${row}`} x={1+column*(16/(3-index))} y={2+row*8} width={16/(3-index)-2} height="6" rx="1"/>))}</svg></button>)}</div></div>
           <div ref={coursePanelRef} className={`legacy-courses course-tab-panel course-size-${courseSize}`} key={courseFilter} role="tabpanel" aria-label={courseFilter}>
-            {realCourses.filter(course=>courseFilter==='All Course'||course.category===courseFilter).map(course=><Link key={course.id} to={coursePath(course.id)} viewTransition><img src={course.image} alt=""/><strong>{course.title}</strong><span>{course.instructor}</span></Link>)}
+            {realCourses.filter(course=>course.status!=='Cancelled').filter(course=>courseFilter==='All Course'||course.category===courseFilter).map(course=><Link key={course.id} to={coursePath(course.id)} viewTransition><img src={course.image} alt=""/><strong>{course.title}</strong><span>{course.instructor}</span></Link>)}
           </div>
-          {upcomingBookings.length ? <section className="dashboard-additional-bookings"><h2>Your booked lessons</h2><div className="legacy-courses">{upcomingBookings.map((booking,index)=><Link key={booking.id} to={bookingPath(booking.id)} viewTransition><img alt="" src={`/assets/figma/student-tutor-${index%3+1}.jpg`}/><strong>Online lesson</strong><span>{new Date(booking.startAtUtc).toLocaleString('en-GB',{timeZone:'Asia/Ho_Chi_Minh',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span></Link>)}</div></section> : null}
+          {upcomingBookings.length ? <section className="dashboard-additional-bookings"><h2>{isTutor?'Your upcoming lessons':'Your booked lessons'}</h2><div className="legacy-courses">{upcomingBookings.map((booking,index)=><Link key={booking.id} to={bookingPath(booking.id)} viewTransition><img alt="" src={`/assets/figma/student-tutor-${index%3+1}.jpg`}/><strong>{isTutor?'Teaching session':'Online lesson'}</strong><span>{new Date(booking.startAtUtc).toLocaleString('en-GB',{timeZone:'Asia/Ho_Chi_Minh',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span></Link>)}</div></section> : null}
         </div>
 
         <aside className="dashboard-rail" aria-label="Calendar and events">
@@ -527,7 +528,7 @@ export function NotificationsScreen() {
 
   return (
     <AppShell active="notifications" contentClassName="notifications" title="Notifications">
-      <div className="notification-list">{notifications ? notifications.map((notification)=><article className={`student-card notification-item notification-with-details ${notification.status==='Unread'?'is-unread':''}`} key={notification.id} onClick={() => void markRead(notification)}><div><h2>{notificationTitle(notification)}</h2><NotificationDetails item={notification}/></div><time>{new Date(notification.createdAtUtc).toLocaleDateString()}</time></article>) : studentNotifications.map(([title,body,time,image],index)=><article className={`student-card notification-item ${index<2?'is-unread':''}`} key={title}><div className="notification-avatar"><img alt="" src={`/assets/figma/student-tutor-${image}.jpg`}/><span /></div><div><h2>{title}</h2><p>{body}</p></div><time>{time}</time></article>)}</div>
+      <div className="notification-list">{notifications ? notifications.map((notification)=><article className={`student-card notification-item notification-with-details ${notification.status==='Unread'?'is-unread':''}`} key={notification.id} onClick={() => void markRead(notification)}><div>{notification.courseId?<Link to={`/student/courses/${encodeURIComponent(notification.courseId)}`} className="notification-item-link"><h2>{notificationTitle(notification)}</h2><NotificationDetails item={notification}/></Link>:<><h2>{notificationTitle(notification)}</h2><NotificationDetails item={notification}/></>}</div><time>{new Date(notification.createdAtUtc).toLocaleDateString()}</time></article>) : studentNotifications.map(([title,body,time,image],index)=><article className={`student-card notification-item ${index<2?'is-unread':''}`} key={title}><div className="notification-avatar"><img alt="" src={`/assets/figma/student-tutor-${image}.jpg`}/><span /></div><div><h2>{title}</h2><p>{body}</p></div><time>{time}</time></article>)}</div>
     </AppShell>
   );
 }
@@ -603,8 +604,9 @@ export function CourseDetailsScreen() {
   async function enroll(){setMessage('');setSubmitting(true);try{await gatewayClient.enrollCourse(courseId!);setMessage('You are enrolled');await Promise.all([reload(),reloadMine()]);}catch(reason){setMessage(reason instanceof Error?reason.message:'Unable to enroll');}finally{setSubmitting(false);}}
   return <AppShell active="dashboard" contentClassName="course-details-page" title={course?.title ?? 'Course details'}>
     <section className="student-card course-details-card">
-      <header className="course-details-actions"><div className="course-details-navigation"><Link className="course-back-link" to="/student/dashboard">← Back to schedule</Link><Link className="course-library-link" to="/student/courses">My courses</Link></div>{course?<Button disabled={submitting||enrolled} onClick={()=>void enroll()}>{enrolled?'Enrolled':submitting?'Enrolling…':'Enroll in course'}</Button>:null}</header>
+      <header className="course-details-actions"><div className="course-details-navigation"><Link className="course-back-link" to="/student/dashboard">← Back to schedule</Link><Link className="course-library-link" to="/student/courses">My courses</Link></div>{course?<Button disabled={submitting||enrolled||courseState(course)!=='Open'||course.enrolled>=course.capacity||course.sessions.some(s=>Date.parse(s.startAtUtc)<=Date.now())} onClick={()=>void enroll()}>{courseState(course)==='Cancelled'?'Course cancelled':enrolled?'Enrolled':submitting?'Enrolling…':courseState(course)!=='Open'?'Registration closed':course.enrolled>=course.capacity?'Course full':course.sessions.some(s=>Date.parse(s.startAtUtc)<=Date.now())?'Registration closed':'Enroll in course'}</Button>:null}</header>
       {message?<Toast message={message} tone={message==='You are enrolled'?'success':'error'} onClose={closeToast}/>:null}
+      {course?<CourseLifecycleActions course={course} mode="student" enrolled={enrolled} onChanged={async()=>{await Promise.all([reload(),reloadMine()]);}}/>:null}
       {course?<div className="course-details-body"><div className="course-details-intro"><img alt={course.title} src={course.image}/><h2>{course.title}</h2><p>{course.description}</p></div><div className="course-details-information"><DetailRows rows={[["Instructor",course.instructor],["Type",course.category],["Enrolment",`${course.enrolled} / ${course.capacity}`]]}/><h3>Session schedule <small>(GMT+07)</small></h3><div className="course-session-grid">{[...course.sessions].sort((a,b)=>a.startAtUtc.localeCompare(b.startAtUtc)).map((session,index)=><article key={session.id}><span>Session {index+1}</span><strong>{new Date(session.startAtUtc).toLocaleDateString('en-GB',{timeZone:'Asia/Ho_Chi_Minh',day:'2-digit',month:'short',year:'numeric'})}</strong><small>{new Date(session.startAtUtc).toLocaleTimeString('en-GB',{timeZone:'Asia/Ho_Chi_Minh',hour:'2-digit',minute:'2-digit'})} – {new Date(session.endAtUtc).toLocaleTimeString('en-GB',{timeZone:'Asia/Ho_Chi_Minh',hour:'2-digit',minute:'2-digit'})}</small></article>)}</div></div></div>:<p>{loading?'Loading course…':'This course is unavailable.'}</p>}
     </section>
   </AppShell>;

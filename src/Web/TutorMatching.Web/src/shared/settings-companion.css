@@ -27,6 +27,7 @@
 @media(max-width:850px){.settings-layout{grid-template-columns:1fr}.settings-companion{min-height:0;padding:24px}.companion-intro{position:absolute;top:24px;left:24px}.companion-intro h2{font-size:30px}.companion-intro p{display:none}.companion-scene{max-width:480px;margin:0 auto;padding-top:90px}.companion-bubble{top:0;width:51%}.buddy-illustration{max-height:330px}.companion-footer{margin-top:0}}
 @media(max-width:450px){.settings-layout .tutor-settings-card{padding:20px}.settings-layout .setting-row{gap:16px}.settings-layout .tutor-policy{align-items:flex-start}.settings-companion{padding:20px 14px}.companion-intro{left:20px}.companion-intro h2{font-size:26px}.companion-intro .companion-eyebrow{font-size:8px}.companion-bubble{width:52%;padding:12px}.companion-bubble strong{font-size:11px}.companion-bubble p{font-size:10px}.companion-scene{padding-top:145px}.companion-hello{right:8px;bottom:0}.companion-footer{margin-top:16px}}
 @media(prefers-reduced-motion:reduce){.buddy-illustration *,.companion-bubble{animation:none!important}.companion-hello{transition:none}}
+@media(max-width:850px){.settings-fit-viewport>.settings-layout{width:100%!important;zoom:1!important}}
 @media(min-width:851px){
  .student-shell:has(.tutor-settings),.student-shell:has(.tutor-settings) .student-workspace { min-height:100dvh; }
  .student-content.tutor-settings { min-height:0; padding:24px 30px; }
