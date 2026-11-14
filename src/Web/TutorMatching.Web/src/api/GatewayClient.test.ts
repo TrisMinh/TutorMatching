@@ -134,6 +134,22 @@ describe('GatewayClient', () => {
     );
   });
 
+  it('queries composed tutor availability with the selected date and timezone', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ items: [], page: 1, pageSize: 20, total: 0, generatedAtUtc: '2026-11-14T00:00:00Z', partial: false }));
+    const client = new GatewayClient({
+      baseUrl: 'http://gateway.test',
+      fetcher,
+      session: createSession({ accessToken: 'access', refreshToken: 'refresh' }),
+    });
+
+    await client.searchAvailableTutors({ subjectId: '22222222-2222-2222-2222-222222222222', date: '2026-11-14', timezone: 'Asia/Ho_Chi_Minh' });
+
+    expect(fetcher).toHaveBeenCalledWith(
+      'http://gateway.test/api/v1/search/available-tutors?subjectId=22222222-2222-2222-2222-222222222222&date=2026-11-14&timezone=Asia%2FHo_Chi_Minh&page=1&pageSize=20',
+      expect.objectContaining({ headers: expect.objectContaining({ Authorization: 'Bearer access' }) }),
+    );
+  });
+
   it('revokes the refresh token and clears the local session on logout', async () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(null, { status: 204 }));
     const session = createSession({ accessToken: 'access', refreshToken: 'refresh' });

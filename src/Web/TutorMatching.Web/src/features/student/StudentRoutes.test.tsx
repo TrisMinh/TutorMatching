@@ -1,6 +1,7 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
+import { gatewayClient } from '../../api';
 import { App } from '../../app/App';
 
 function renderAt(path: string) {
@@ -40,6 +41,24 @@ describe('student routes from Figma', () => {
 
     expect(screen.getByText('Tran Thu Ha')).toBeInTheDocument();
     expect(screen.queryByText('Nguyen Minh Anh')).not.toBeInTheDocument();
+  });
+
+  it('uses composed availability when the approved today filter is selected', async () => {
+    const user = userEvent.setup();
+    const subject = { id: '11111111-1111-1111-1111-111111111111', code: 'MATH', name: 'Mathematics' };
+    vi.spyOn(gatewayClient, 'listSubjects').mockResolvedValue([subject]);
+    vi.spyOn(gatewayClient, 'searchTutors').mockResolvedValue({ items: [], page: 1, pageSize: 100, total: 0 });
+    const available = vi.spyOn(gatewayClient, 'searchAvailableTutors').mockResolvedValue({ items: [], page: 1, pageSize: 100, total: 0, generatedAtUtc: '2026-11-14T00:00:00Z', partial: false });
+    renderAt('/student/find-tutors');
+
+    await user.click(screen.getByRole('button', { name: 'Available today' }));
+
+    await waitFor(() => expect(available).toHaveBeenCalledWith(expect.objectContaining({
+      subjectId: subject.id,
+      timezone: 'Asia/Ho_Chi_Minh',
+    })));
+    expect(screen.getByRole('button', { name: 'Available today' })).toHaveAttribute('aria-pressed', 'true');
+    vi.restoreAllMocks();
   });
 
   it('changes the selected lesson time', async () => {

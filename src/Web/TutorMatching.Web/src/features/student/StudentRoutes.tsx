@@ -142,10 +142,30 @@ export function CompleteProfileScreen() {
 export function FindTutorsScreen() {
   const [query, setQuery] = useState('');
   const [submittedQuery, setSubmittedQuery] = useState('');
-  const loadTutors = useCallback(() => gatewayClient.searchTutors(undefined, 1, 100), []);
+  const [availableToday, setAvailableToday] = useState(false);
   const loadSubjects = useCallback(() => gatewayClient.listSubjects(), []);
-  const { data: remoteTutors, loading } = useGatewayResource(loadTutors, null);
   const { data: subjects } = useGatewayResource(loadSubjects, null);
+  const mathematics = subjects?.find((subject) => subject.name === 'Mathematics');
+  const loadTutors = useCallback(async () => {
+    if (!availableToday || !mathematics) return gatewayClient.searchTutors(mathematics?.id, 1, 100);
+    const date = new Intl.DateTimeFormat('en-CA', {
+      year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Asia/Ho_Chi_Minh',
+    }).format(new Date());
+    const result = await gatewayClient.searchAvailableTutors({
+      subjectId: mathematics.id,
+      date,
+      timezone: 'Asia/Ho_Chi_Minh',
+      pageSize: 100,
+    });
+    return {
+      ...result,
+      items: result.items.map((tutor) => ({
+        ...tutor,
+        availability: tutor.availableSlots,
+      })),
+    };
+  }, [availableToday, mathematics]);
+  const { data: remoteTutors, loading } = useGatewayResource(loadTutors, null);
   const availableTutors = useMemo<TutorCard[]>(
     () => remoteTutors ? remoteTutors.items.map((tutor, index) => mapTutor(tutor, index, subjects ?? [])) : studentTutors,
     [remoteTutors, subjects],
@@ -162,7 +182,7 @@ export function FindTutorsScreen() {
         <input onChange={(event) => setQuery(event.target.value)} placeholder="Search by subject, tutor name, or keyword" value={query} />
         <Button size="large" type="submit">Search</Button>
       </form>
-      <div className="tutor-filters">{['Mathematics', 'Grade 10', 'Online', 'Under 200k', 'Available today'].map((filter, index) => <button className={index === 0 ? 'is-active' : ''} key={filter} type="button">{filter}</button>)}</div>
+      <div className="tutor-filters">{['Mathematics', 'Grade 10', 'Online', 'Under 200k', 'Available today'].map((filter, index) => <button aria-pressed={index === 0 || (filter === 'Available today' && availableToday)} className={index === 0 || (filter === 'Available today' && availableToday) ? 'is-active' : ''} key={filter} onClick={() => { if (filter === 'Available today') setAvailableToday((value) => !value); }} type="button">{filter}</button>)}</div>
       <div className="tutor-results-title"><h2>Tutors matching your search</h2><span>Sort by relevance</span></div>
       <span aria-live="polite" className="sr-only">{loading ? 'Loading tutors' : `${tutors.length} tutors found`}</span>
       <div className="tutor-grid">

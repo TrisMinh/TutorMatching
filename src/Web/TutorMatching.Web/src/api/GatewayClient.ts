@@ -63,6 +63,17 @@ export type TutorSearchResponse = {
   pageSize: number;
   total: number;
 };
+export type AvailableTutor = Omit<TutorProfile, 'availability'> & {
+  availableSlots: AvailabilityWindow[];
+};
+export type AvailableTutorSearchResponse = {
+  items: AvailableTutor[];
+  page: number;
+  pageSize: number;
+  total: number;
+  generatedAtUtc: string;
+  partial: boolean;
+};
 export type StudentProfile = {
   id: string;
   userId: string;
@@ -174,6 +185,17 @@ export class GatewayClient {
     const query = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
     if (subjectId) query.set('subjectId', subjectId);
     return this.request<TutorSearchResponse>(`/api/v1/tutors?${query}`, {}, false);
+  }
+
+  searchAvailableTutors(input: { subjectId: string; date: string; timezone: string; page?: number; pageSize?: number }) {
+    const query = new URLSearchParams({
+      subjectId: input.subjectId,
+      date: input.date,
+      timezone: input.timezone,
+      page: String(input.page ?? 1),
+      pageSize: String(input.pageSize ?? 20),
+    });
+    return this.request<AvailableTutorSearchResponse>(`/api/v1/search/available-tutors?${query}`);
   }
 
   getTutor(id: string) {
