@@ -1,5 +1,6 @@
-import { useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { useRef, useState, type ChangeEvent, type FormEvent, type KeyboardEvent } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { GatewayError, gatewayClient } from '../../api';
 import { Button } from '../../design-system/Button';
 import { TextField } from '../../design-system/TextField';
 import { AuthLayout } from './AuthLayout';
@@ -19,15 +20,21 @@ function AuthHeader({ title, description }: AuthHeaderProps) {
   );
 }
 
-function RoleSwitch() {
-  const [role, setRole] = useState<'student' | 'tutor'>('student');
+function RoleSwitch({ onChange, value }: { onChange?: (role: 'student' | 'tutor') => void; value?: 'student' | 'tutor' }) {
+  const [internalRole, setInternalRole] = useState<'student' | 'tutor'>('student');
+  const role = value ?? internalRole;
+
+  function selectRole(nextRole: 'student' | 'tutor') {
+    setInternalRole(nextRole);
+    onChange?.(nextRole);
+  }
 
   return (
     <div className="auth-role-switch" aria-label="Continue as" role="group">
       <button
         aria-pressed={role === 'student'}
         className={role === 'student' ? 'is-active' : ''}
-        onClick={() => setRole('student')}
+        onClick={() => selectRole('student')}
         type="button"
       >
         I’m a student
@@ -35,7 +42,7 @@ function RoleSwitch() {
       <button
         aria-pressed={role === 'tutor'}
         className={role === 'tutor' ? 'is-active' : ''}
-        onClick={() => setRole('tutor')}
+        onClick={() => selectRole('tutor')}
         type="button"
       >
         I’m a tutor
@@ -45,6 +52,29 @@ function RoleSwitch() {
 }
 
 export function SignInScreen({ error = false }: { error?: boolean }) {
+  const navigate = useNavigate();
+  const [email, setEmail] = useState(error ? 'minh@example.com' : '');
+  const [password, setPassword] = useState('');
+  const [remember, setRemember] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<'student' | 'tutor'>('student');
+  const [submitError, setSubmitError] = useState(error ? 'Email or password is incorrect.' : '');
+  const [submitting, setSubmitting] = useState(false);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSubmitting(true);
+    setSubmitError('');
+    try {
+      const { user } = await gatewayClient.login({ email, password }, remember);
+      const destination = user.role === 'Tutor' ? '/tutor/dashboard' : '/student/dashboard';
+      navigate(destination, { replace: true });
+    } catch (reason) {
+      setSubmitError(reason instanceof GatewayError ? reason.message : 'Unable to reach TutorMatching. Try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   return (
     <AuthLayout
       screen={error ? 'sign-in-error' : 'sign-in'}
@@ -57,32 +87,35 @@ export function SignInScreen({ error = false }: { error?: boolean }) {
       />
       <div className="auth-role-block">
         <p>Continue as</p>
-        <RoleSwitch />
+        <RoleSwitch onChange={setSelectedRole} value={selectedRole} />
       </div>
-      <form className="auth-form" onSubmit={(event) => event.preventDefault()}>
+      <form className="auth-form" onSubmit={submit}>
         <TextField
           autoComplete="email"
-          defaultValue={error ? 'minh@example.com' : undefined}
           label="Email address"
+          onChange={(event) => setEmail(event.target.value)}
           placeholder="you@example.com"
           type="email"
+          value={email}
         />
         <TextField
           autoComplete="current-password"
-          error={error ? 'Email or password is incorrect.' : undefined}
+          error={submitError || undefined}
           label="Password"
+          onChange={(event) => setPassword(event.target.value)}
           placeholder="Enter password"
           type="password"
+          value={password}
         />
         <div className="auth-form__options">
           <label className="auth-checkbox">
-            <input type="checkbox" />
+            <input checked={remember} onChange={(event) => setRemember(event.target.checked)} type="checkbox" />
             <span>Remember me</span>
           </label>
           <Link to="/auth/forgot-password">Forgot password?</Link>
         </div>
-        <Button fullWidth size="large" type="submit">
-          Sign in
+        <Button disabled={submitting} fullWidth size="large" type="submit">
+          {submitting ? 'Signing in…' : 'Sign in'}
         </Button>
       </form>
       <p className="auth-switch-link">
@@ -93,6 +126,35 @@ export function SignInScreen({ error = false }: { error?: boolean }) {
 }
 
 export function SignUpScreen() {
+  const navigate = useNavigate();
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmation, setConfirmation] = useState('');
+  const [submitError, setSubmitError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (password !== confirmation) {
+      setSubmitError('Passwords do not match.');
+      return;
+    }
+    setSubmitting(true);
+    setSubmitError('');
+    const selectedRole = window.sessionStorage.getItem('tutormatching.registration.role');
+    const role = selectedRole === 'Tutor' ? 'Tutor' : 'Student';
+    try {
+      await gatewayClient.register({ email, password, role });
+      window.sessionStorage.setItem('tutormatching.registration.name', fullName);
+      navigate('/auth/sign-in', { replace: true });
+    } catch (reason) {
+      setSubmitError(reason instanceof GatewayError ? reason.message : 'Unable to create your account. Try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   return (
     <AuthLayout
       screen="sign-up"
@@ -103,12 +165,12 @@ export function SignUpScreen() {
         description="Join as a student or tutor and start learning."
         title="Create your account"
       />
-      <form className="auth-form" onSubmit={(event) => event.preventDefault()}>
-        <TextField autoComplete="name" label="Full name" placeholder="Enter your full name" />
-        <TextField autoComplete="email" label="Email address" placeholder="you@example.com" type="email" />
-        <TextField autoComplete="new-password" label="Password" placeholder="Create a password" type="password" />
-        <TextField autoComplete="new-password" label="Confirm password" placeholder="Repeat your password" type="password" />
-        <Button fullWidth size="large" type="submit">Create account</Button>
+      <form className="auth-form" onSubmit={submit}>
+        <TextField autoComplete="name" label="Full name" onChange={(event) => setFullName(event.target.value)} placeholder="Enter your full name" required value={fullName} />
+        <TextField autoComplete="email" label="Email address" onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" required type="email" value={email} />
+        <TextField autoComplete="new-password" hint="Use at least 12 characters." label="Password" minLength={12} onChange={(event) => setPassword(event.target.value)} placeholder="Create a password" required type="password" value={password} />
+        <TextField autoComplete="new-password" error={submitError || undefined} label="Confirm password" onChange={(event) => setConfirmation(event.target.value)} placeholder="Repeat your password" required type="password" value={confirmation} />
+        <Button disabled={submitting} fullWidth size="large" type="submit">{submitting ? 'Creating account…' : 'Create account'}</Button>
       </form>
       <p className="auth-legal-copy">
         By continuing, you agree to our <a href="/terms">Terms</a> and <a href="/privacy">Privacy Policy</a>.
@@ -216,6 +278,12 @@ type AccountRole = 'Student' | 'Tutor';
 
 export function ChooseRoleScreen() {
   const [role, setRole] = useState<AccountRole>('Student');
+  const navigate = useNavigate();
+
+  function continueWith(selectedRole: AccountRole) {
+    window.sessionStorage.setItem('tutormatching.registration.role', selectedRole);
+    navigate('/auth/sign-up');
+  }
 
   return (
     <AuthLayout screen="choose-role" slideNumber={7} slideTitle="One platform, two paths to progress.">
@@ -236,8 +304,8 @@ export function ChooseRoleScreen() {
         </button>
       </div>
       <div className="auth-role-actions">
-        <Button fullWidth size="large">Continue as {role}</Button>
-        <Button fullWidth size="large" variant="secondary">Continue as {role === 'Student' ? 'Tutor' : 'Student'}</Button>
+        <Button fullWidth onClick={() => continueWith(role)} size="large">Continue as {role}</Button>
+        <Button fullWidth onClick={() => continueWith(role === 'Student' ? 'Tutor' : 'Student')} size="large" variant="secondary">Continue as {role === 'Student' ? 'Tutor' : 'Student'}</Button>
       </div>
     </AuthLayout>
   );

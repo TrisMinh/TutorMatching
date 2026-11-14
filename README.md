@@ -37,6 +37,10 @@ docker compose ps
 postman collection run "postman/collections/TutorMatching Smoke"
 ```
 
+Sau khi các health check hoàn tất, mở giao diện tại `http://localhost:3000`.
+Nginx chuyển tiếp `/api/*` tới Gateway nên frontend và API chạy cùng origin;
+Gateway vẫn có thể truy cập trực tiếp tại `http://localhost:8080`.
+
 Muốn mở cổng service và datastore trên loopback để debug:
 
 ```powershell

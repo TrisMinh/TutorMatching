@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { App } from '../../app/App';
+import { GatewayError, gatewayClient } from '../../api';
 
 function renderAt(path: string) {
   return render(
@@ -12,6 +13,8 @@ function renderAt(path: string) {
 }
 
 describe('authentication routes from Figma', () => {
+  afterEach(() => vi.restoreAllMocks());
+
   it.each([
     ['/auth/sign-in', 'Welcome back!'],
     ['/auth/sign-up', 'Create your account'],
@@ -59,5 +62,44 @@ describe('authentication routes from Figma', () => {
 
     expect(firstDigit).toHaveValue('4');
     expect(secondDigit).toHaveFocus();
+  });
+
+  it('signs in through the Gateway and routes by the account role', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(gatewayClient, 'login').mockResolvedValue({
+      tokens: { accessToken: 'access', refreshToken: 'refresh' },
+      user: {
+        userId: '11111111-1111-1111-1111-111111111111',
+        email: 'minh@example.com',
+        role: 'Student',
+      },
+    });
+    renderAt('/auth/sign-in');
+
+    await user.type(screen.getByLabelText('Email address'), 'minh@example.com');
+    await user.type(screen.getByLabelText('Password'), 'TutorMatching!123');
+    await user.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    expect(gatewayClient.login).toHaveBeenCalledWith(
+      { email: 'minh@example.com', password: 'TutorMatching!123' },
+      false,
+    );
+    expect(await screen.findByRole('heading', { name: 'Good morning, Minh' })).toBeInTheDocument();
+  });
+
+  it('shows the Gateway authentication failure on the password field', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(gatewayClient, 'login').mockRejectedValue(
+      new GatewayError(401, { detail: 'Invalid credentials or session.' }),
+    );
+    renderAt('/auth/sign-in');
+
+    await user.type(screen.getByLabelText('Email address'), 'minh@example.com');
+    await user.type(screen.getByLabelText('Password'), 'wrong-password');
+    await user.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    expect(await screen.findByLabelText('Password')).toHaveAccessibleDescription(
+      'Invalid credentials or session.',
+    );
   });
 });

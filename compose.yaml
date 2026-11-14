@@ -27,6 +27,16 @@ x-postgres-common: &postgres-common
     retries: 20
 
 services:
+  web:
+    build:
+      context: src/Web/TutorMatching.Web
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    networks: [backend]
+    ports: ["3000:80"]
+    depends_on:
+      gateway: { condition: service_healthy }
+
   gateway:
     <<: *api-common
     networks: [backend]
