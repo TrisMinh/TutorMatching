@@ -1,0 +1,13 @@
+.app-toast { position: fixed; z-index: 1000; left: max(24px,env(safe-area-inset-left)); bottom: calc(24px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 12px; width: min(390px,calc(100vw - 48px)); border: 1px solid #d8e8e1; border-radius: 12px; padding: 16px; overflow: hidden; background: #fff; color: #198357; box-shadow: 0 12px 40px rgb(20 23 54 / 18%); animation: toast-enter 220ms cubic-bezier(.22,1,.36,1) both; }
+.app-toast > svg { flex-shrink: 0; }
+.app-toast p { flex: 1; margin: 0; color: #141736; font-size: 14px; line-height: 21px; overflow-wrap: anywhere; }
+.app-toast button { flex-shrink: 0; width: 28px; height: 28px; border: 0; border-radius: 6px; background: transparent; color: #697b98; cursor: pointer; font-size: 22px; }
+.app-toast button:hover { background: #f0f3f8; }
+.app-toast--error { color: #c33e52; border-color: #f0d6dc; }
+.app-toast-progress { position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: currentColor; transform-origin: left; animation: toast-progress 3s linear forwards; }
+.app-toast.is-leaving { animation: toast-leave 200ms ease-in both; }
+@keyframes toast-enter { from {opacity:0;transform:translateX(-30px);} to {opacity:1;transform:translateX(0);} }
+@keyframes toast-leave { to {opacity:0;transform:translateX(-20px);} }
+@keyframes toast-progress { to {transform:scaleX(0);} }
+@media(max-width:700px) { .app-toast { bottom: calc(96px + env(safe-area-inset-bottom)); } }
+@media(prefers-reduced-motion:reduce) { .app-toast,.app-toast.is-leaving { animation:none; } }

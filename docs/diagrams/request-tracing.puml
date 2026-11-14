@@ -1,0 +1,33 @@
+@startuml request-tracing
+!include _style.puml
+title Trace and Correlation Propagation
+autonumber
+actor Client
+participant Gateway
+participant Scheduling
+database PostgreSQL
+participant "Outbox Publisher" as Publisher
+queue RabbitMQ
+participant "Notification Consumer" as Consumer
+
+Client -> Gateway : request\ntraceparent optional, X-Correlation-ID optional
+Gateway -> Gateway : validate/create W3C trace + correlation UUID
+Gateway -> Scheduling : inject traceparent, tracestate, correlation
+Scheduling -> PostgreSQL : EF span, parameterized query
+PostgreSQL --> Scheduling : result
+Scheduling -> PostgreSQL : Booking + Outbox\nstore correlationId/causationId/traceparent
+Scheduling --> Gateway : response + correlation ID
+Gateway --> Client : status + traceId in Problem Details if error
+
+Publisher -> PostgreSQL : claim Outbox
+PostgreSQL --> Publisher : event envelope
+Publisher -[#6B7280,dashed]-> RabbitMQ : AMQP headers + event trace context
+RabbitMQ -[#6B7280,dashed]-> Consumer : delivery
+Consumer -> Consumer : create consumer span\nlink/parent producer context
+
+note bottom
+Logs chứa traceId/spanId/correlationId; metrics không label theo UUID.
+Không truyền JWT, password, refresh/hold token trong baggage hoặc log.
+end note
+@enduml
+

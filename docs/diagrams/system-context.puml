@@ -1,0 +1,22 @@
+@startuml system-context
+!include _style.puml
+title TutorMatching - System Context
+left to right direction
+
+actor "Học sinh" as Student
+actor "Gia sư" as Tutor
+actor "Quản trị viên" as Admin
+rectangle "TutorMatching Platform\nTìm gia sư, giữ slot, đặt lịch, thông báo" as System #FFF1E6
+rectangle "Email development\nMailpit / provider adapter" as Email
+
+Student -[#2E5AA8]-> System : tìm kiếm, đặt/hủy lịch
+Tutor -[#2E5AA8]-> System : hồ sơ, availability, lịch dạy
+Admin -[#2E5AA8]-> System : account, health, demo
+System -[#6B7280,dashed]-> Email : confirmation, reminder
+
+note bottom of System
+Public traffic chỉ vào Web/Gateway.
+Booking integrity thuộc Scheduling + PostgreSQL.
+end note
+@enduml
+

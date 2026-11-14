@@ -1,0 +1,64 @@
+@startuml notification-database-schema
+!include _style.puml
+title notification_db - Physical Schema
+hide circle
+
+entity processed_events {
+  * event_id : uuid <<PK>>
+  --
+  event_type : varchar(120)
+  event_version : integer
+  processed_at_utc : timestamptz
+}
+entity notifications {
+  * id : uuid <<PK>>
+  --
+  recipient_user_id : uuid <<IDX>>
+  booking_id : uuid <<EXTERNAL>>
+  type : varchar(50)
+  title : varchar(200)
+  body : varchar(4000)
+  status : varchar(20) <<CHECK>>
+  source_event_id : uuid <<FK>>
+  created_at_utc : timestamptz
+  read_at_utc : timestamptz NULL
+}
+entity reminder_schedules {
+  * id : uuid <<PK>>
+  --
+  booking_id : uuid <<EXTERNAL>>
+  recipient_user_id : uuid
+  reminder_type : varchar(30)
+  scheduled_for_utc : timestamptz <<IDX>>
+  status : varchar(20) <<CHECK>>
+  lease_until_utc : timestamptz NULL
+  attempts : integer
+  next_attempt_at_utc : timestamptz
+  last_error : varchar(1000) NULL
+  source_event_id : uuid <<FK>>
+}
+entity delivery_attempts {
+  * id : uuid <<PK>>
+  --
+  notification_id : uuid NULL <<FK>>
+  reminder_id : uuid NULL <<FK>>
+  channel : varchar(20)
+  attempt_no : integer
+  status : varchar(20)
+  provider_message_id : varchar(200) NULL
+  error_code : varchar(100) NULL
+  started_at_utc : timestamptz
+  completed_at_utc : timestamptz NULL
+}
+
+processed_events ||--o{ notifications
+processed_events ||--o{ reminder_schedules
+notifications |o--o{ delivery_attempts
+reminder_schedules |o--o{ delivery_attempts
+note bottom
+UQ notification(source_event_id,recipient_user_id,type).
+UQ reminder(booking_id,recipient_user_id,reminder_type).
+Worker claim due rows bằng FOR UPDATE SKIP LOCKED.
+end note
+@enduml
+

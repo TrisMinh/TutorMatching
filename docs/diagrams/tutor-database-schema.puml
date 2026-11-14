@@ -1,0 +1,52 @@
+@startuml tutor-database-schema
+!include _style.puml
+title tutor_db - Physical Schema
+hide circle
+
+entity tutor_profiles {
+  * id : uuid <<PK>>
+  --
+  user_id : uuid <<UQ>>
+  display_name : varchar(100)
+  bio : varchar(2000)
+  experience_years : smallint <<CHECK 0..80>>
+  avatar_url : varchar(500) NULL
+  status : varchar(20) <<CHECK>>
+  created_at_utc : timestamptz
+  updated_at_utc : timestamptz
+  version : integer
+}
+entity subjects {
+  * id : uuid <<PK>>
+  --
+  code : varchar(50) <<UQ>>
+  name : varchar(120)
+  is_active : boolean
+  created_at_utc : timestamptz
+  updated_at_utc : timestamptz
+}
+entity tutor_subjects {
+  * tutor_id : uuid <<PK,FK>>
+  * subject_id : uuid <<PK,FK>>
+  --
+  proficiency_level : varchar(20) <<CHECK>>
+}
+entity availability_windows {
+  * id : uuid <<PK>>
+  --
+  tutor_id : uuid <<FK>>
+  start_at_utc : timestamptz
+  end_at_utc : timestamptz
+  slot_range : tstzrange <<GENERATED>>
+  created_at_utc : timestamptz
+}
+
+tutor_profiles ||--o{ tutor_subjects
+subjects ||--o{ tutor_subjects
+tutor_profiles ||--o{ availability_windows
+note bottom of availability_windows
+EXCLUDE USING gist (tutor_id WITH =, slot_range WITH &&).
+CHECK end > start; boundary align 30 phút do Domain validate.
+end note
+@enduml
+

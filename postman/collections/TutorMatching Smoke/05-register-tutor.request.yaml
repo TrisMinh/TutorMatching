@@ -1,0 +1,17 @@
+$kind: http-request
+name: Register tutor
+order: 5000
+url: '{{baseUrl}}/api/v1/auth/register'
+method: POST
+headers:
+  Content-Type: application/json
+auth:
+  type: noauth
+body:
+  type: json
+  content: |-
+    {"email":"tutor-{{runId}}@example.test","password":"{{password}}","role":"Tutor"}
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('tutor registered', () => pm.response.to.have.status(201));

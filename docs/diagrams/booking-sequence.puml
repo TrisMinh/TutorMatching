@@ -1,0 +1,46 @@
+@startuml booking-sequence
+!include _style.puml
+title Hold and Confirm Booking
+autonumber
+actor Student
+participant "Gateway" as GW
+participant "Scheduling" as S #FFF1E6
+participant "Tutor Service" as T
+database "SchedulingDb" as DB
+collections "Redis" as R
+
+Student -> GW : POST /api/v1/bookings/holds
+GW -> S : JWT + tutorId/subjectId/start
+S -> T : validate tutor, subject, availability
+T --> S : valid
+S -> DB : query confirmed overlap (fast fail)
+DB --> S : none
+S -> R : Lua create overlapping locks NX PX 300000
+alt lock available
+  R --> S : OK
+  S --> GW : 201 holdId + one-time holdToken
+  GW --> Student : 201 expiresAtUtc
+else tutor/student held
+  R --> S : conflict + PTTL
+  S --> GW : 409 Problem Details
+  GW --> Student : 409
+end
+
+== Confirm ==
+Student -> GW : POST /api/v1/bookings {holdId, token}
+GW -> S : JWT + hold
+S -> R : validate owner/token/PTTL
+R --> S : hold metadata
+S -> DB : BEGIN; INSERT Booking + Outbox
+alt exclusion constraint passes
+  DB --> S : COMMIT
+  S -> R : compare-and-delete best effort
+  S --> GW : 201 Booking Confirmed
+  GW --> Student : 201 + Location
+else SQLSTATE 23P01
+  DB --> S : ROLLBACK
+  S --> GW : 409 slot conflict
+  GW --> Student : 409
+end
+@enduml
+

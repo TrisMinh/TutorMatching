@@ -1,0 +1,28 @@
+@startuml booking-state
+!include _style.puml
+title Booking Lifecycle
+left to right direction
+
+state "Available\n(suy ra, không lưu)" as Available
+state "Held\nRedis TTL 300s" as Held #FFF5EA
+state "Confirmed\nPostgreSQL" as Confirmed #FFF1E6
+state "Expired\nterminal hold" as Expired
+state "Cancelled\nPostgreSQL" as Cancelled
+
+[*] --> Available
+Available --> Held : createHold [slot free] / Lua NX+TTL
+Held --> Confirmed : confirm [owner+token+TTL+no conflict]\n/ insert booking+outbox
+Held --> Expired : TTL elapsed / Redis deletes
+Held --> Available : release [owner] / compare-and-delete
+Confirmed --> Cancelled : cancel [participant] / outbox event
+Confirmed --> Confirmed : repeated confirm same hold / return existing
+Cancelled --> Cancelled : repeated cancel / no-op
+Expired --> [*]
+Cancelled --> [*]
+
+note bottom of Confirmed
+Không có PendingTutorApproval trong phiên bản đầu.
+Exclusion constraint bảo vệ race condition.
+end note
+@enduml
+

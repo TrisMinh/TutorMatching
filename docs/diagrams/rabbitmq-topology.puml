@@ -1,0 +1,29 @@
+@startuml rabbitmq-topology
+!include _style.puml
+title RabbitMQ Event Topology
+left to right direction
+
+component "Scheduling Outbox Publisher" as Pub #FFF1E6
+queue "topic exchange\ntutormatching.events" as Events
+queue "quorum queue\nnotification.booking-events.v1" as Main
+component "Notification Consumer\nprefetch 20, manual ACK" as Consumer
+queue "retry exchange\ntutormatching.retry" as RetryEx
+queue "retry queue\nTTL 30s" as RetryQ
+queue "dead-letter exchange\ntutormatching.dlx" as DLX
+queue "DLQ\nnotification.booking-events.dlq" as DLQ
+
+Pub -[#6B7280,dashed]-> Events : persistent + mandatory + confirms
+Events -[#6B7280,dashed]-> Main : booking.confirmed.v1\nbooking.cancelled.v1
+Main -[#6B7280,dashed]-> Consumer : at-least-once
+Consumer -[#6B7280,dashed]-> RetryEx : transient, attempt < 5
+RetryEx -[#6B7280,dashed]-> RetryQ
+RetryQ -[#6B7280,dashed]-> Events : TTL + DLX original route
+Consumer -[#B85C24,dashed]-> DLX : poison / max attempts
+DLX -[#B85C24,dashed]-> DLQ : alert + manual review
+
+note bottom of Consumer
+ACK chỉ sau NotificationDb commit.
+eventId inbox unique làm consumer idempotent.
+end note
+@enduml
+

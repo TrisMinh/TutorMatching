@@ -1,0 +1,27 @@
+@startuml ddd-context-map
+!include _style.puml
+title TutorMatching - DDD Context Map
+left to right direction
+
+rectangle "Identity & Access\nSupporting" as Identity
+rectangle "Tutor Management\nSupporting" as Tutor
+rectangle "Student Management\nSupporting" as Student
+rectangle "Scheduling & Matching\nCORE DOMAIN" as Scheduling #FFF1E6
+rectangle "Notification\nSupporting" as Notification
+rectangle "Gateway / BFF\nComposition" as Gateway
+
+Gateway -[#2E5AA8]-> Identity : Published Language / REST
+Gateway -[#2E5AA8]-> Tutor : Customer-Supplier / REST
+Gateway -[#2E5AA8]-> Student : Customer-Supplier / REST
+Gateway -[#2E5AA8]-> Scheduling : Customer-Supplier / REST
+Gateway -[#2E5AA8]-> Notification : Customer-Supplier / REST
+Scheduling -[#2E5AA8]-> Tutor : Conformist API
+Scheduling -[#2E5AA8]-> Student : Conformist API
+Scheduling -[#6B7280,dashed]-> Notification : Published Language\nBooking events v1
+
+note bottom of Scheduling
+Aggregate Booking bảo vệ conflict và lifecycle.
+Eventual consistency chỉ ở read/notification path.
+end note
+@enduml
+

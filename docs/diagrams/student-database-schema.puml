@@ -1,0 +1,33 @@
+@startuml student-database-schema
+!include _style.puml
+title student_db - Physical Schema
+hide circle
+
+entity student_profiles {
+  * id : uuid <<PK>>
+  --
+  user_id : uuid <<UQ>>
+  display_name : varchar(100)
+  education_level : varchar(30) <<CHECK>>
+  learning_goal : varchar(2000)
+  timezone : varchar(100)
+  status : varchar(20) <<CHECK>>
+  created_at_utc : timestamptz
+  updated_at_utc : timestamptz
+  version : integer
+}
+entity student_subject_interests {
+  * student_id : uuid <<PK,FK>>
+  * subject_id : uuid <<PK,EXTERNAL>>
+  --
+  priority : smallint <<CHECK 1..5>>
+  created_at_utc : timestamptz
+}
+
+student_profiles ||--o{ student_subject_interests
+note bottom of student_subject_interests
+subject_id tham chiếu logic Tutor subject catalog;
+không có foreign key xuyên database.
+end note
+@enduml
+

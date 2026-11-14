@@ -1,0 +1,27 @@
+import {test,expect} from '@playwright/test';
+test('timezone changes session time and position, persists, and keeps mini calendar usable',async({page,request})=>{
+ const response=await request.post('http://localhost:8080/api/v1/auth/login',{data:{email:'student01@demo.tutormatching.test',password:'TutorDemo!2026'}});
+ const session={...await response.json(),role:'Student'};
+ await page.addInitScript(value=>localStorage.setItem('tutormatching.auth.session',JSON.stringify(value)),session);
+ await page.goto('/student/dashboard');
+ const selector=page.getByRole('combobox',{name:'Schedule timezone'});
+ await expect(selector).toContainText('Vietnam');
+ await page.getByRole('combobox',{name:/Enrolled courses/}).click();
+ await page.getByRole('option',{name:'App Development Course',exact:true}).click();
+ const event=page.locator('.course-calendar-event').filter({hasText:'App Development'}).first();
+ await expect(event).toBeAttached();
+ const original=await event.locator('small').first().textContent();
+ const top=await event.evaluate(el=>(el as HTMLElement).style.top);
+ await selector.click();await page.getByRole('option',{name:'(GMT +00:00) UTC',exact:true}).click();
+ await expect(event.locator('small').first()).not.toHaveText(original!);
+ expect(await event.evaluate(el=>(el as HTMLElement).style.top)).not.toEqual(top);
+ await page.reload();await expect(selector).toContainText('UTC');
+ await selector.click();await page.getByRole('option',{name:/India/}).click();
+ await page.getByRole('combobox',{name:/Enrolled courses/}).click();
+ await page.getByRole('option',{name:'App Development Course',exact:true}).click();
+ await expect(event.locator('small').first()).toHaveText('16:30');
+ await page.getByRole('button',{name:'Next week',exact:true}).click();
+ await expect(page.locator('.dashboard-mini-calendar__days button')).toHaveCount(42);
+ await page.setViewportSize({width:390,height:844});await expect(selector).toBeVisible();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
+});

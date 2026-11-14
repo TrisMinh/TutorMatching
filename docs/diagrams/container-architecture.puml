@@ -1,0 +1,49 @@
+@startuml container-architecture
+!include _style.puml
+title TutorMatching - Container Architecture
+left to right direction
+
+actor User
+component "React Web\n:3000" as Web
+component "YARP Gateway\n:8080" as Gateway
+
+package "Bounded-context services" {
+  component "Identity\n:8080" as Identity
+  component "Tutor\n:8080" as Tutor
+  component "Student\n:8080" as Student
+  component "Scheduling\nCore Domain :8080" as Scheduling #FFF1E6
+  component "Notification\n:8080" as Notification
+}
+
+database "IdentityDb" as IdentityDb
+database "TutorDb" as TutorDb
+database "StudentDb" as StudentDb
+database "SchedulingDb\nBooking + Outbox" as SchedulingDb #FFF1E6
+database "NotificationDb\nInbox + Reminder" as NotificationDb
+queue "Redis\nHold TTL 300s" as Redis
+queue "RabbitMQ\nTopic events" as Rabbit
+
+User -[#2E5AA8]-> Web : HTTPS
+Web -[#2E5AA8]-> Gateway : /api/v1
+Gateway -[#2E5AA8]-> Identity
+Gateway -[#2E5AA8]-> Tutor
+Gateway -[#2E5AA8]-> Student
+Gateway -[#2E5AA8]-> Scheduling
+Gateway -[#2E5AA8]-> Notification
+Identity --> IdentityDb
+Tutor --> TutorDb
+Student --> StudentDb
+Scheduling --> SchedulingDb
+Scheduling --> Redis
+Scheduling -[#2E5AA8]-> Tutor : validate slot
+Scheduling -[#2E5AA8]-> Student : resolve participant
+Scheduling -[#6B7280,dashed]-> Rabbit : outbox events
+Rabbit -[#6B7280,dashed]-> Notification : at-least-once
+Notification --> NotificationDb
+
+note bottom of Scheduling
+DB exclusion constraints là lớp chống race cuối.
+Không service nào đọc database của service khác.
+end note
+@enduml
+

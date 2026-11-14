@@ -1,0 +1,38 @@
+@startuml scheduling-domain
+!include _style.puml
+title Scheduling Domain
+
+class Booking <<Aggregate Root>> #FFF1E6 {
+  +Id: UUID
+  +StudentId: UUID
+  +TutorId: UUID
+  +Slot: TimeSlot
+  +Status: BookingStatus
+  +ConfirmFromHold()
+  +Cancel(actor, reason)
+}
+class TimeSlot <<Value Object>> {
+  +StartAtUtc: instant
+  +EndAtUtc: instant
+  +Overlaps(): bool
+}
+enum BookingStatus {
+  Confirmed
+  Cancelled
+}
+class BookingConfirmed <<Domain Event>>
+class BookingCancelled <<Domain Event>>
+class OutboxMessage <<Persistence Model>>
+
+Booking *-- TimeSlot
+Booking --> BookingStatus
+Booking ..> BookingConfirmed : raises
+Booking ..> BookingCancelled : raises
+BookingConfirmed ..> OutboxMessage : maps after transaction
+BookingCancelled ..> OutboxMessage : maps after transaction
+note bottom of Booking
+Hold nằm trong Redis, không phải Entity của Booking aggregate.
+PostgreSQL exclusion constraint bảo vệ Tutor và Student overlap.
+end note
+@enduml
+

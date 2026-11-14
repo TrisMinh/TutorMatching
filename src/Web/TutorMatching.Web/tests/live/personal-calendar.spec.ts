@@ -1,0 +1,21 @@
+import {test,expect} from '@playwright/test';
+test('calendar combines own courses and confirmed bookings with correct links',async({page,request})=>{
+ const login=await request.post('http://localhost:8080/api/v1/auth/login',{data:{email:'student01@demo.tutormatching.test',password:'TutorDemo!2026'}});
+ await page.addInitScript(session=>localStorage.setItem('tutormatching.auth.session',JSON.stringify({...session,role:'Student'})),await login.json());
+ const course={id:'owned-course',title:'My enrolled course',category:'Workshop',instructor:'Teacher',image:'/assets/figma/student-tutor-1.jpg',capacity:20,enrolled:1,sessions:[{id:'session',startAtUtc:'2026-12-14T11:00:00Z',endAtUtc:'2026-12-14T12:00:00Z'}]};
+ await page.route('**/api/v1/courses/mine',r=>r.fulfill({json:[course]}));
+ await page.route('**/api/v1/bookings',r=>r.fulfill({json:[{id:'earlier-booking',tutorId:'teacher',subjectId:'math',status:'Confirmed',startAtUtc:'2026-11-15T12:00:00Z',endAtUtc:'2026-11-15T13:00:00Z'},{id:'booking-test',tutorId:'teacher',subjectId:'math',status:'Confirmed',startAtUtc:'2026-12-14T12:00:00Z',endAtUtc:'2026-12-14T13:00:00Z'},{id:'cancelled-test',status:'Cancelled',startAtUtc:'2026-12-14T13:00:00Z',endAtUtc:'2026-12-14T14:00:00Z'}]}));
+ await page.route('**/api/v1/subjects',r=>r.fulfill({json:[{id:'math',name:'Mathematics'}]}));
+ await page.goto('/student/dashboard');
+ const calendar=page.getByRole('region',{name:'Weekly calendar'});
+ await page.getByLabel('Enrolled courses (1)').click();
+ await page.getByRole('option',{name:'My enrolled course',exact:true}).click();
+ await expect(calendar.getByRole('button',{name:/My enrolled course/})).toBeAttached();
+ const booking=calendar.getByRole('button',{name:/Mathematics lesson/});
+ await expect(booking).toHaveClass(/tone-booking/);
+ await expect(calendar.locator('.course-calendar-event')).toHaveCount(2);
+ const gaps=await booking.evaluate(el=>{const event=el.getBoundingClientRect();const day=el.parentElement!.getBoundingClientRect();return {left:event.left-day.left,right:day.right-event.right};});
+ expect(gaps.left).toBeGreaterThanOrEqual(5);
+ expect(gaps.right).toBeGreaterThanOrEqual(4);
+ await booking.click();await expect(page).toHaveURL(/student\/bookings\/booking-test$/);
+});

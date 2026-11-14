@@ -1,0 +1,14 @@
+.course-state { display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:8px; color:#087c58; background:#e6f7ef; font:12px var(--font-semibold); white-space:nowrap; }
+.course-state::before { content:''; width:5px; height:5px; border-radius:50%; background:currentColor; }
+.course-state[data-state=Closed] { color:#9a6700; background:#fff3d6; }.course-state[data-state=Cancelled] { color:#bf2244;background:#fff0f3; }.course-state[data-state=Completed] { color:#5a54a4;background:#efedff; }
+.course-lifecycle { display:flex; align-items:center; flex-wrap:wrap; gap:14px; padding:16px 0; }
+.course-lifecycle__buttons { display:flex; flex-wrap:wrap; gap:10px; margin-left:auto; }
+.course-lifecycle__buttons .tm-button,.course-lifecycle>.tm-button { min-width:0; min-height:42px; font-size:13px; padding:0 16px; }
+.course-lifecycle>p { font-size:13px; line-height:1.6;color:var(--color-muted); margin:0; }
+.course-lifecycle .course-cancellation-note { color:#bf2244; flex-basis:100%; }
+.course-lifecycle-dialog { width:min(460px,calc(100vw - 32px)); max-height:calc(100dvh - 40px); overflow:auto; border:1px solid var(--color-border); border-radius:20px; padding:28px; background:#fff; color:var(--color-ink); box-shadow:0 24px 80px #14173626; }
+.course-lifecycle-dialog::backdrop { background:#14173655; backdrop-filter:blur(4px); }
+.course-lifecycle-dialog h2 { font:22px var(--font-semibold); margin:0 0 16px; }.course-lifecycle-dialog p { font-size:14px;line-height:1.65;color:var(--color-muted);margin:14px 0 24px; }
+.course-lifecycle-dialog .course-lifecycle-error { color:#bf2244; }.course-lifecycle-dialog .course-lifecycle__buttons { margin-top:24px;justify-content:flex-end; }
+.my-course-summary>.course-state { margin:8px 0; }.my-course-grid .my-course-card:has([data-state=Cancelled]) { background:#fffafb; }
+@media(max-width:600px){.course-lifecycle__buttons{margin-left:0;width:100%}.course-lifecycle__buttons .tm-button{flex:1}.course-lifecycle-dialog{padding:22px}}

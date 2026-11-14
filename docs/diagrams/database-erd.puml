@@ -1,0 +1,96 @@
+@startuml database-erd
+!include _style.puml
+title TutorMatching - Database Ownership ERD
+hide circle
+
+package "IdentityDb" {
+  entity user_accounts {
+    * id : uuid <<PK>>
+    --
+    normalized_email : varchar <<UQ>>
+    role : varchar
+    status : varchar
+  }
+  entity refresh_sessions {
+    * id : uuid <<PK>>
+    --
+    user_id : uuid <<FK>>
+    token_hash : char(64) <<UQ>>
+    family_id : uuid
+  }
+  user_accounts ||--o{ refresh_sessions
+}
+package "TutorDb" {
+  entity tutor_profiles {
+    * id : uuid <<PK>>
+    --
+    user_id : uuid <<UQ>>
+    display_name : varchar
+    version : int
+  }
+  entity availability_windows {
+    * id : uuid <<PK>>
+    --
+    tutor_id : uuid <<FK>>
+    slot_range : tstzrange <<EXCLUDE>>
+  }
+  tutor_profiles ||--o{ availability_windows
+}
+package "StudentDb" {
+  entity student_profiles {
+    * id : uuid <<PK>>
+    --
+    user_id : uuid <<UQ>>
+    education_level : varchar
+    version : int
+  }
+}
+package "SchedulingDb" #FFF1E6 {
+  entity bookings {
+    * id : uuid <<PK>>
+    --
+    student_id : uuid
+    tutor_id : uuid
+    slot_range : tstzrange <<EXCLUDE>>
+    status : varchar
+    source_hold_id : uuid <<UQ>>
+  }
+  entity outbox_messages {
+    * id : uuid <<PK>>
+    --
+    event_type : varchar
+    payload : jsonb
+    published_at_utc : timestamptz
+  }
+  bookings ||--o{ outbox_messages : aggregate_id
+}
+package "NotificationDb" {
+  entity processed_events {
+    * event_id : uuid <<PK>>
+    --
+    processed_at_utc : timestamptz
+  }
+  entity notifications {
+    * id : uuid <<PK>>
+    --
+    recipient_user_id : uuid
+    booking_id : uuid
+    source_event_id : uuid
+  }
+  entity reminder_schedules {
+    * id : uuid <<PK>>
+    --
+    booking_id : uuid
+    recipient_user_id : uuid
+    status : varchar
+  }
+  processed_events ||--o{ notifications
+  processed_events ||--o{ reminder_schedules
+}
+
+note bottom
+Không vẽ foreign key giữa package: ID xuyên service chỉ là external reference.
+Mỗi package có role, migration và backup riêng.
+end note
+@enduml
+

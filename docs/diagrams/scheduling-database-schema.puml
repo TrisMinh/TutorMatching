@@ -1,0 +1,54 @@
+@startuml scheduling-database-schema
+!include _style.puml
+title scheduling_db - Physical Schema
+hide circle
+
+entity bookings #FFF1E6 {
+  * id : uuid <<PK>>
+  --
+  student_id : uuid <<EXTERNAL>>
+  student_user_id : uuid <<EXTERNAL>>
+  tutor_id : uuid <<EXTERNAL>>
+  tutor_user_id : uuid <<EXTERNAL>>
+  subject_id : uuid <<EXTERNAL>>
+  start_at_utc : timestamptz
+  end_at_utc : timestamptz
+  slot_range : tstzrange <<GENERATED>>
+  status : varchar(20) <<CHECK>>
+  source_hold_id : uuid <<UQ>>
+  confirmed_at_utc : timestamptz
+  cancelled_at_utc : timestamptz NULL
+  cancelled_by_user_id : uuid NULL
+  cancellation_reason : varchar(50) NULL
+  created_at_utc : timestamptz
+  updated_at_utc : timestamptz
+  version : integer
+}
+entity outbox_messages {
+  * id : uuid <<PK>>
+  --
+  aggregate_type : varchar(80)
+  aggregate_id : uuid <<IDX>>
+  event_type : varchar(120)
+  event_version : integer
+  routing_key : varchar(160)
+  payload : jsonb
+  correlation_id : uuid
+  causation_id : uuid NULL
+  traceparent : varchar(128) NULL
+  occurred_at_utc : timestamptz
+  published_at_utc : timestamptz NULL
+  attempt_count : integer
+  next_attempt_at_utc : timestamptz
+  locked_until_utc : timestamptz NULL
+  last_error : varchar(1000) NULL
+}
+
+bookings ||--o{ outbox_messages : aggregate_id
+note bottom of bookings
+CHECK end=start+60m. Hai partial EXCLUDE constraint trên status=Confirmed:
+(tutor_id,slot_range &&) và (student_id,slot_range &&).
+Indexes participant/status/start và tutor/status/start.
+end note
+@enduml
+

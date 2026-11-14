@@ -1,0 +1,12 @@
+.account-preferences .setting-row { min-height:76px; gap:20px; }
+.account-preferences .setting-row>div,.account-preferences .tutor-policy>div,.account-preferences .setting-password>div { min-width:0; }
+.account-preferences .setting-row button { flex-shrink:0; }
+.account-preferences .tutor-policy { gap:20px; }
+.account-preferences .tutor-policy .tm-select { flex:0 0 180px; width:180px; }
+.account-preferences .setting-password { display:flex; align-items:center; justify-content:space-between; gap:20px; padding:16px 0; }
+.account-preferences .setting-password span { display:block; color:var(--color-muted); font-size:13px; margin-top:6px; }
+.account-password-link { flex-shrink:0; color:var(--color-primary); font-family:var(--font-semibold); font-size:13px; text-decoration:none; }
+.account-password-link:focus-visible { outline:2px solid var(--color-primary); outline-offset:4px; }
+.account-settings-error { color:#b91c3b; background:#fff1f2; padding:12px; border-radius:10px; }
+.account-settings-error button { color:inherit; text-decoration:underline; background:transparent; border:0; cursor:pointer; }
+@media(max-width:600px){.account-preferences .tutor-policy,.account-preferences .setting-password{align-items:flex-start;flex-direction:column;gap:12px}.account-preferences .tutor-policy .tm-select{flex-basis:auto;width:100%}}
