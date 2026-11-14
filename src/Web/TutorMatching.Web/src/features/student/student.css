@@ -121,6 +121,11 @@
   position: absolute;
   bottom: 47px;
   left: 0;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
 }
 
 .student-workspace {

@@ -7,3 +7,4 @@ export const gatewayClient = new GatewayClient({
 });
 
 export * from './GatewayClient';
+export { authSessionKey, browserSession } from './browserSession';

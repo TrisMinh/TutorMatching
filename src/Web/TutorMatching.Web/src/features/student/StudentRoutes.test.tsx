@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { App } from '../../app/App';
 
 function renderAt(path: string) {
+  window.sessionStorage.setItem('tutormatching.auth.session', JSON.stringify({ accessToken: 'test', refreshToken: 'test', role: 'Student' }));
   return render(
     <MemoryRouter initialEntries={[path]}>
       <App />

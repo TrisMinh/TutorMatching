@@ -6,6 +6,8 @@ export type AuthSession = {
   accessTokenExpiresAtUtc?: string;
   refreshTokenExpiresAtUtc?: string;
   tokenType?: string;
+  role?: AccountRole;
+  email?: string;
 };
 
 export type AuthSessionRepository = {
@@ -20,6 +22,7 @@ export type ProblemDetails = {
   status?: number;
   code?: string;
   errors?: Record<string, string[]>;
+  error?: string;
 };
 
 export class GatewayError extends Error {
@@ -28,7 +31,7 @@ export class GatewayError extends Error {
   readonly errors?: Record<string, string[]>;
 
   constructor(status: number, problem: ProblemDetails = {}) {
-    super(problem.detail || problem.title || `Gateway request failed with status ${status}.`);
+    super(problem.detail || problem.error || problem.title || `Gateway request failed with status ${status}.`);
     this.name = 'GatewayError';
     this.status = status;
     this.code = problem.code;
@@ -134,7 +137,10 @@ export class GatewayClient {
     );
     this.session.save(tokens, persistent);
     try {
-      return { tokens, user: await this.getCurrentUser() };
+      const user = await this.getCurrentUser();
+      const session = { ...tokens, role: user.role, email: user.email };
+      this.session.save(session, persistent);
+      return { tokens: session, user };
     } catch (error) {
       this.session.clear();
       throw error;
@@ -180,7 +186,7 @@ export class GatewayClient {
 
   saveStudentProfile(input: {
     displayName: string;
-    educationLevel: string;
+    educationLevel: number;
     learningGoal: string;
     timezone: string;
   }) {
@@ -295,8 +301,9 @@ export class GatewayClient {
       return undefined;
     }
     const refreshed = await response.json() as AuthSession;
-    this.session.save(refreshed);
-    return refreshed;
+    const session = { ...refreshed, role: current.role, email: current.email };
+    this.session.save(session);
+    return session;
   }
 
   private async toError(response: Response) {

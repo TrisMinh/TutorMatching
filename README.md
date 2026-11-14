@@ -15,7 +15,8 @@ npm run dev
 ```
 
 Kiểm tra frontend bằng `npm run test:run`, `npm run test:visual` và
-`npm run build`. Toàn bộ font, ảnh và SVG Figma được lưu cục bộ trong
+`npm run build`. Khi Docker stack đang chạy, dùng `npm run test:e2e:live` để
+kiểm tra đăng ký, đăng nhập, đăng xuất và route guard qua Gateway thật. Toàn bộ font, ảnh và SVG Figma được lưu cục bộ trong
 `public/assets/figma`.
 
 ## Backend và tài liệu kỹ thuật

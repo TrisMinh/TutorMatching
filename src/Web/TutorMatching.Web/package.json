@@ -8,7 +8,8 @@
     "build": "tsc --noEmit -p tsconfig.app.json && vite build",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:visual": "playwright test"
+    "test:visual": "playwright test",
+    "test:e2e:live": "playwright test --config playwright.live.config.ts"
   },
   "dependencies": {
     "react": "19.3.1",

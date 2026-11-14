@@ -16,6 +16,6 @@ export default defineConfig({
     globals: true,
     setupFiles: './src/test/setup.ts',
     css: true,
-    exclude: [...configDefaults.exclude, 'tests/visual/**'],
+    exclude: [...configDefaults.exclude, 'tests/visual/**', 'tests/live/**'],
   },
 });

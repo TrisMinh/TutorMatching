@@ -66,13 +66,15 @@ describe('authentication routes from Figma', () => {
 
   it('signs in through the Gateway and routes by the account role', async () => {
     const user = userEvent.setup();
-    vi.spyOn(gatewayClient, 'login').mockResolvedValue({
-      tokens: { accessToken: 'access', refreshToken: 'refresh' },
+    vi.spyOn(gatewayClient, 'login').mockImplementation(async () => {
+      window.sessionStorage.setItem('tutormatching.auth.session', JSON.stringify({ accessToken: 'access', refreshToken: 'refresh', role: 'Student', email: 'minh@example.com' }));
+      return {
+      tokens: { accessToken: 'access', refreshToken: 'refresh', role: 'Student', email: 'minh@example.com' },
       user: {
         userId: '11111111-1111-1111-1111-111111111111',
         email: 'minh@example.com',
         role: 'Student',
-      },
+      }};
     });
     renderAt('/auth/sign-in');
 

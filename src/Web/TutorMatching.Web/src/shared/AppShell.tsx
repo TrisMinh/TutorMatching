@@ -1,5 +1,6 @@
-import type { ReactNode } from 'react';
-import { NavLink } from 'react-router-dom';
+import { useState, type ReactNode } from 'react';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { gatewayClient } from '../api';
 import { BrandMark } from '../design-system/BrandMark';
 
 type AppShellProps = {
@@ -50,18 +51,30 @@ function AssetIcon({ asset }: { asset: string }) {
 }
 
 export function AppShell({ active, children, contentClassName = '', mode = 'student', mobileTitle, title }: AppShellProps) {
+  const navigate = useNavigate();
+  const [loggingOut, setLoggingOut] = useState(false);
   const isTutor = mode === 'tutor';
   const desktopNavigation = isTutor ? tutorNavItems : navItems;
   const mobileNavigation = isTutor ? tutorMobileItems : mobileItems;
   const accountName = isTutor ? 'Minh Anh' : 'Minh';
   const accountImage = isTutor ? '/assets/figma/student-tutor-3.jpg' : '/assets/figma/student-tutor-1.jpg';
+
+  async function logout() {
+    setLoggingOut(true);
+    try {
+      await gatewayClient.logout();
+    } finally {
+      navigate('/auth/sign-in', { replace: true });
+    }
+  }
+
   return (
     <div className={`student-shell ${isTutor ? 'student-shell--tutor' : ''}`}>
       <aside className="student-sidebar">
-        <a className="student-brand" href="/student/dashboard">
+        <Link className="student-brand" to={isTutor ? '/tutor/dashboard' : '/student/dashboard'}>
           <BrandMark />
           <span>Teach.</span>
-        </a>
+        </Link>
         <div className="student-account">
           <img alt={accountName} src={accountImage} />
           <div><strong>{accountName}</strong><span>{isTutor ? 'Tutor account' : 'Student account'}</span></div>
@@ -74,7 +87,7 @@ export function AppShell({ active, children, contentClassName = '', mode = 'stud
             </NavLink>
           ))}
         </nav>
-        <a className="student-logout" href="/auth/sign-in"><AssetIcon asset="nav-logout.svg" /><span>Log out</span></a>
+        <button className="student-logout" disabled={loggingOut} onClick={logout} type="button"><AssetIcon asset="nav-logout.svg" /><span>{loggingOut ? 'Logging out…' : 'Log out'}</span></button>
       </aside>
       <section className="student-workspace">
         <header className="student-topbar">

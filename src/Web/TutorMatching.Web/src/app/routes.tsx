@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import type { AccountRole } from '../api';
 import { authRoutes } from '../features/auth/AuthRoutes';
 import { studentRoutes } from '../features/student/StudentRoutes';
 import { stateRoutes } from '../features/states/StateGallery';
@@ -8,6 +9,7 @@ import { tutorRoutes } from '../features/tutor/TutorRoutes';
 export type AppRoute = {
   path: string;
   element: ReactNode;
+  access?: AccountRole;
 };
 
 export function NotFoundFoundation() {
@@ -25,8 +27,8 @@ export function NotFoundFoundation() {
 
 export const appRoutes: AppRoute[] = [
   ...authRoutes,
-  ...studentRoutes,
-  ...tutorRoutes,
+  ...studentRoutes.map((route) => ({ ...route, access: 'Student' as const })),
+  ...tutorRoutes.map((route) => ({ ...route, access: 'Tutor' as const })),
   ...stateRoutes,
   { path: '*', element: <NotFoundFoundation /> },
 ];

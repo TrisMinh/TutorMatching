@@ -17,10 +17,11 @@ export const browserSession: AuthSessionRepository = {
     if (typeof window === 'undefined') return undefined;
     return parse(window.sessionStorage.getItem(sessionKey)) ?? parse(window.localStorage.getItem(sessionKey));
   },
-  save(session, persistent = false) {
+  save(session, persistent) {
     if (typeof window === 'undefined') return;
-    const target = persistent ? window.localStorage : window.sessionStorage;
-    const other = persistent ? window.sessionStorage : window.localStorage;
+    const shouldPersist = persistent ?? window.localStorage.getItem(sessionKey) !== null;
+    const target = shouldPersist ? window.localStorage : window.sessionStorage;
+    const other = shouldPersist ? window.sessionStorage : window.localStorage;
     other.removeItem(sessionKey);
     target.setItem(sessionKey, JSON.stringify(session));
   },
@@ -30,3 +31,5 @@ export const browserSession: AuthSessionRepository = {
     window.localStorage.removeItem(sessionKey);
   },
 };
+
+export const authSessionKey = sessionKey;

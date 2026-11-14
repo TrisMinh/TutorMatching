@@ -117,4 +117,48 @@ describe('GatewayClient', () => {
       }),
     );
   });
+
+  it('serializes the student education enum using the numeric API contract', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ id: 'profile', userId: 'user', displayName: 'Minh', version: 1 }));
+    const client = new GatewayClient({
+      baseUrl: 'http://gateway.test',
+      fetcher,
+      session: createSession({ accessToken: 'access', refreshToken: 'refresh' }),
+    });
+
+    await client.saveStudentProfile({ displayName: 'Minh', educationLevel: 2, learningGoal: 'Exam prep', timezone: 'Asia/Ho_Chi_Minh' });
+
+    expect(fetcher).toHaveBeenCalledWith(
+      'http://gateway.test/api/v1/students/me',
+      expect.objectContaining({ body: JSON.stringify({ displayName: 'Minh', educationLevel: 2, learningGoal: 'Exam prep', timezone: 'Asia/Ho_Chi_Minh' }) }),
+    );
+  });
+
+  it('revokes the refresh token and clears the local session on logout', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(null, { status: 204 }));
+    const session = createSession({ accessToken: 'access', refreshToken: 'refresh' });
+    const client = new GatewayClient({ baseUrl: 'http://gateway.test', fetcher, session });
+
+    await client.logout();
+
+    expect(fetcher).toHaveBeenCalledWith(
+      'http://gateway.test/api/v1/auth/revoke',
+      expect.objectContaining({ method: 'POST', body: JSON.stringify({ refreshToken: 'refresh' }) }),
+    );
+    expect(session.clear).toHaveBeenCalledOnce();
+  });
+
+  it('uses a simple API error payload as the displayed gateway message', async () => {
+    const client = new GatewayClient({
+      baseUrl: 'http://gateway.test',
+      fetcher: vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ error: 'Slot conflicts with a confirmed booking.' }, 409)),
+      session: createSession({ accessToken: 'access', refreshToken: 'refresh' }),
+    });
+
+    await expect(client.createBookingHold({
+      tutorId: '11111111-1111-1111-1111-111111111111',
+      subjectId: '22222222-2222-2222-2222-222222222222',
+      startAtUtc: '2026-11-18T03:30:00Z',
+    })).rejects.toMatchObject({ message: 'Slot conflicts with a confirmed booking.' });
+  });
 });

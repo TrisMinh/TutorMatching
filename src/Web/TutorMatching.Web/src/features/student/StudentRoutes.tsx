@@ -1,6 +1,6 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { gatewayClient, type Booking, type NotificationItem, type Subject, type TutorProfile } from '../../api';
+import { gatewayClient, type Booking, type NotificationItem, type StudentProfile, type Subject, type TutorProfile } from '../../api';
 import { useGatewayResource } from '../../api/useGatewayResource';
 import { Button } from '../../design-system/Button';
 import { TextField } from '../../design-system/TextField';
@@ -10,6 +10,7 @@ import './student.css';
 
 const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const educationLabels = ['Primary', 'Grade 6–9', 'Grade 10', 'University', 'Adult'];
 type TutorCard = (typeof studentTutors)[number] & { bio?: string; source?: TutorProfile };
 type BookingCard = (typeof studentBookings)[number] & { id?: string };
 
@@ -102,7 +103,7 @@ export function CompleteProfileScreen() {
     try {
       await gatewayClient.saveStudentProfile({
         displayName: displayName.trim(),
-        educationLevel: 'UpperSecondary',
+        educationLevel: 2,
         learningGoal: learningGoal.trim(),
         timezone: 'Asia/Ho_Chi_Minh',
       });
@@ -374,9 +375,45 @@ export function NotificationsScreen() {
 }
 
 export function StudentProfileScreen() {
+  const loadProfile = useCallback(() => gatewayClient.getStudentProfile(), []);
+  const { data: profile } = useGatewayResource<StudentProfile | null>(loadProfile, null);
+  const [displayName, setDisplayName] = useState('Nguyen Van Minh');
+  const [schoolLevel, setSchoolLevel] = useState('Grade 10');
+  const [learningGoal, setLearningGoal] = useState('Improve exam results');
+  const [timezone, setTimezone] = useState('Asia/Ho_Chi_Minh');
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    if (!profile) return;
+    setDisplayName(profile.displayName);
+    const educationLevel = typeof profile.educationLevel === 'number'
+      ? profile.educationLevel
+      : Number.parseInt(String(profile.educationLevel), 10);
+    setSchoolLevel(educationLabels[educationLevel] ?? 'Grade 10');
+    setLearningGoal(profile.learningGoal);
+    setTimezone(profile.timezone);
+  }, [profile]);
+
+  async function save() {
+    setSaving(true); setMessage('');
+    try {
+      const normalizedLevel = schoolLevel.toLowerCase();
+      const grade = Number.parseInt(normalizedLevel.replace(/\D/g, ''), 10);
+      const educationLevel = normalizedLevel.includes('university') ? 3
+        : normalizedLevel.includes('adult') ? 4
+          : Number.isFinite(grade) && grade <= 5 ? 0
+            : Number.isFinite(grade) && grade <= 9 ? 1 : 2;
+      await gatewayClient.saveStudentProfile({ displayName, educationLevel, learningGoal, timezone });
+      setMessage('Profile saved');
+    } catch (reason) {
+      setMessage(reason instanceof Error ? reason.message : 'Unable to save your profile.');
+    } finally { setSaving(false); }
+  }
+
   return (
     <AppShell active="profile" contentClassName="student-profile" title="My profile">
-      <section className="student-card student-profile__card"><div className="student-profile__photo"><div className="profile-avatar"><img alt="Minh" src="/assets/figma/student-tutor-3.jpg"/><span /></div><Button>Change photo</Button></div><div className="student-profile__fields"><TextField defaultValue="Nguyen Van Minh" label="Full name"/><TextField defaultValue="minh@example.com" label="Email"/><TextField defaultValue="+84 912 345 678" label="Phone"/><TextField defaultValue="Grade 10" label="School level"/><TextField defaultValue="Mathematics, Physics" label="Subjects"/><TextField defaultValue="Asia/Ho_Chi_Minh" label="Timezone"/></div><Button className="student-profile__save" size="large">Save changes</Button></section>
+      <section className="student-card student-profile__card"><div className="student-profile__photo"><div className="profile-avatar"><img alt={displayName} src="/assets/figma/student-tutor-3.jpg"/><span /></div><Button>Change photo</Button></div><div className="student-profile__fields"><TextField label="Full name" onChange={(event) => setDisplayName(event.target.value)} value={displayName}/><TextField defaultValue="minh@example.com" disabled label="Email"/><TextField defaultValue="+84 912 345 678" label="Phone"/><TextField label="School level" onChange={(event) => setSchoolLevel(event.target.value)} value={schoolLevel}/><TextField label="Learning goal" onChange={(event) => setLearningGoal(event.target.value)} value={learningGoal}/><TextField label="Timezone" onChange={(event) => setTimezone(event.target.value)} value={timezone}/></div>{message ? <p aria-live="polite" className={message === 'Profile saved' ? 'tutor-added' : 'tm-field__message tm-field__message--error'}>{message}</p> : null}<Button className="student-profile__save" disabled={saving} onClick={save} size="large">{saving ? 'Saving…' : 'Save changes'}</Button></section>
     </AppShell>
   );
 }
