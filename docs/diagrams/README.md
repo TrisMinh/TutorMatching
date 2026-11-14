@@ -1,18 +1,18 @@
-# Sơ đồ PlantUML
+# Sơ đồ kiến trúc và kỹ thuật
 
-Thư mục này là nguồn chuẩn cho sơ đồ kiến trúc. Tên component, database, route, event và state phải khớp tài liệu Markdown. `_style.puml` là palette dùng chung: nền sáng, xanh đậm, cam nhấn Scheduling/Core Domain; không dùng màu làm tín hiệu duy nhất.
+Các trang Markdown dưới đây chứa Mermaid và hiển thị thành sơ đồ trực tiếp trên GitHub. Các tệp PlantUML là nguồn song song có độ chi tiết tương đương, dùng để kiểm tra cú pháp và xuất SVG khi cần. Tên component, database, route, event và state phải khớp giữa hai định dạng.
 
 ## Danh mục
 
-| Nhóm | File |
-|---|---|
-| Kiến trúc | `system-context`, `container-architecture`, `deployment-compose`, `ddd-context-map` |
-| Domain | `identity-domain`, `tutor-domain`, `student-domain`, `scheduling-domain`, `notification-domain` |
-| Dữ liệu | `database-erd` ownership overview; 5 file `*-database-schema` physical detail |
-| Sequence | `login-sequence`, `search-sequence`, `booking-sequence`, `cancel-sequence`, `notification-sequence` |
-| State/infra | `booking-state`, `rabbitmq-topology`, `redis-hold-flow`, `request-tracing` |
+| Nhóm | Sơ đồ hiển thị trong Markdown | PlantUML nguồn |
+|---|---|---|
+| Kiến trúc | [architecture.md](architecture.md) | `system-context`, `container-architecture`, `deployment-compose`, `ddd-context-map` |
+| Domain | [domain.md](domain.md) | `identity-domain`, `tutor-domain`, `student-domain`, `scheduling-domain`, `notification-domain` |
+| Dữ liệu | [data.md](data.md) | `database-erd` và 5 file `*-database-schema` |
+| Tuần tự | [sequences.md](sequences.md) | `login-sequence`, `search-sequence`, `booking-sequence`, `cancel-sequence`, `notification-sequence` |
+| Trạng thái và hạ tầng | [state-and-infrastructure.md](state-and-infrastructure.md) | `booking-state`, `rabbitmq-topology`, `redis-hold-flow`, `request-tracing` |
 
-## Render
+## Kiểm tra và xuất PlantUML
 
 Nếu có PlantUML CLI:
 

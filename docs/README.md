@@ -25,7 +25,7 @@ Từ **PHẢI**, **KHÔNG ĐƯỢC**, **NÊN** và **CÓ THỂ** mang nghĩa quy
 - `05-operations`: observability, runbook, backup và khôi phục.
 - `06-testing`: chiến lược, kịch bản E2E, Postman.
 - `07-delivery`: workflow, Definition of Done, phân công.
-- `diagrams`: nguồn PlantUML và hướng dẫn render.
+- `diagrams`: sơ đồ Mermaid hiển thị trực tiếp trong Markdown và nguồn PlantUML đối chiếu.
 
 ## Tài liệu chi tiết
 
@@ -39,14 +39,15 @@ Từ **PHẢI**, **KHÔNG ĐƯỢC**, **NÊN** và **CÓ THỂ** mang nghĩa quy
 | Operations | [Observability](05-operations/observability.md), [Runbook](05-operations/runbook.md), [Backup](05-operations/backup-and-recovery.md) |
 | Testing | [Strategy](06-testing/test-strategy.md), [E2E](06-testing/e2e-scenarios.md), [Postman](06-testing/postman-guide.md) |
 | Delivery | [Workflow](07-delivery/development-workflow.md), [Definition of Done](07-delivery/definition-of-done.md), [Ownership](07-delivery/team-ownership.md) |
-| Visual model | [PlantUML index](diagrams/README.md) |
+| Visual model | [Danh mục sơ đồ](diagrams/README.md) |
 
 ## Sơ đồ nên mở cùng tài liệu
 
-- Tổng thể: [system context](diagrams/system-context.puml), [container architecture](diagrams/container-architecture.puml), [Compose deployment](diagrams/deployment-compose.puml), [DDD context map](diagrams/ddd-context-map.puml).
-- Domain/data: [Identity](diagrams/identity-domain.puml), [Tutor](diagrams/tutor-domain.puml), [Student](diagrams/student-domain.puml), [Scheduling](diagrams/scheduling-domain.puml), [Notification](diagrams/notification-domain.puml), [database ownership ERD](diagrams/database-erd.puml) và các physical schema chi tiết trong [PlantUML index](diagrams/README.md).
-- Luồng: [login](diagrams/login-sequence.puml), [search](diagrams/search-sequence.puml), [booking](diagrams/booking-sequence.puml), [cancel](diagrams/cancel-sequence.puml), [notification](diagrams/notification-sequence.puml), [booking state](diagrams/booking-state.puml).
-- Hạ tầng: [RabbitMQ](diagrams/rabbitmq-topology.puml), [Redis hold](diagrams/redis-hold-flow.puml), [request tracing](diagrams/request-tracing.puml).
+- Tổng thể: [system context, container, deployment và DDD context](diagrams/architecture.md).
+- Domain: [Identity, Tutor, Student, Scheduling và Notification](diagrams/domain.md).
+- Dữ liệu: [ownership ERD và physical schema của 5 database](diagrams/data.md).
+- Luồng: [login, search, booking, cancel và notification](diagrams/sequences.md).
+- Trạng thái/hạ tầng: [booking state, RabbitMQ, Redis hold và request tracing](diagrams/state-and-infrastructure.md).
 
 ## Quyết định nền tảng
 
