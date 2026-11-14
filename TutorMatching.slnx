@@ -32,6 +32,9 @@
   <Folder Name="/tests/Identity/">
     <Project Path="tests/Identity/TutorMatching.Identity.Tests/TutorMatching.Identity.Tests.csproj" />
   </Folder>
+  <Folder Name="/tests/Notification/">
+    <Project Path="tests/Notification/TutorMatching.Notification.Tests/TutorMatching.Notification.Tests.csproj" />
+  </Folder>
   <Folder Name="/tests/Scheduling/">
     <Project Path="tests/Scheduling/TutorMatching.Scheduling.Tests/TutorMatching.Scheduling.Tests.csproj" />
   </Folder>
