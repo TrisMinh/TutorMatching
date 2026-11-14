@@ -1,18 +1,11 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import { authRoutes } from '../features/auth/AuthRoutes';
 
 export type AppRoute = {
   path: string;
   element: ReactNode;
 };
-
-export function SignInFoundation() {
-  return (
-    <main className="foundation-screen">
-      <h1>Welcome back!</h1>
-    </main>
-  );
-}
 
 export function NotFoundFoundation() {
   return (
@@ -28,6 +21,6 @@ export function NotFoundFoundation() {
 }
 
 export const appRoutes: AppRoute[] = [
-  { path: '/auth/sign-in', element: <SignInFoundation /> },
+  ...authRoutes,
   { path: '*', element: <NotFoundFoundation /> },
 ];
