@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import { BrandMark } from '../../design-system/BrandMark';
 import './auth.css';
 
 const tutorSlides = [
@@ -32,7 +33,7 @@ type AuthLayoutProps = {
 export function Brand() {
   return (
     <a aria-label="Teach. home" className="auth-brand" href="/">
-      <img alt="" aria-hidden="true" src="/assets/figma/brand-mark.svg" />
+      <BrandMark />
       <span>Teach.</span>
     </a>
   );

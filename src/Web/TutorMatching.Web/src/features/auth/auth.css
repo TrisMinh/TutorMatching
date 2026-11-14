@@ -34,11 +34,6 @@
   text-decoration: none;
 }
 
-.auth-brand img {
-  width: 26px;
-  height: 30px;
-}
-
 .auth-help {
   color: var(--color-muted);
   font-size: 13px;
@@ -640,11 +635,6 @@
   .auth-brand {
     gap: 10px;
     font-size: 17px;
-  }
-
-  .auth-brand img {
-    width: 27px;
-    height: 30px;
   }
 
   .auth-entry__content,
