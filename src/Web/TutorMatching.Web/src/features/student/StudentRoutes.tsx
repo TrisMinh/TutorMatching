@@ -80,7 +80,7 @@ export function FindTutorsScreen() {
   }, [submittedQuery]);
 
   return (
-    <AppShell active="find" contentClassName="find-tutors" title="Find the right tutor">
+    <AppShell active="find" contentClassName="find-tutors" mobileTitle="Find tutors" title="Find the right tutor">
       <form className="tutor-search" onSubmit={(event) => { event.preventDefault(); setSubmittedQuery(query); }}>
         <input onChange={(event) => setQuery(event.target.value)} placeholder="Search by subject, tutor name, or keyword" value={query} />
         <Button size="large" type="submit">Search</Button>
