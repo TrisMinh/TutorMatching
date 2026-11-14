@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type KeyboardEvent } from 'react';
-import { GatewayError, gatewayClient } from '../../api';
+import { GatewayError, gatewayClient, browserSession } from '../../api';
 import { Button } from '../../design-system/Button';
 import { TextField } from '../../design-system/TextField';
 import { MotionLink as Link, useMotionNavigate } from '../../shared/MotionLink';
@@ -181,61 +181,27 @@ export function SignUpScreen() {
 }
 
 export function ForgotPasswordScreen() {
-  const navigate = useMotionNavigate();
-  return (
-    <AuthLayout screen="forgot-password" slideNumber={3} slideTitle="We’ll help you get back on track.">
-      <AuthHeader
-        description="Enter your email and we’ll send a secure reset link."
-        title="Forgot password?"
-      />
-      <form className="auth-form" onSubmit={(event) => { event.preventDefault(); navigate('/auth/check-email', { viewTransition: true }); }}>
-        <TextField autoComplete="email" label="Email address" placeholder="you@example.com" type="email" />
-        <Button fullWidth size="large" type="submit">Send reset link</Button>
-      </form>
-      <p className="auth-switch-link">Remembered it? <Link to="/auth/sign-in" viewTransition>Back to sign in</Link></p>
-      <Link className="auth-back-link" to="/auth/sign-in" viewTransition>← <span>Back to sign in</span></Link>
-    </AuthLayout>
-  );
+ const navigate=useMotionNavigate();
+ const [email,setEmail]=useState(()=>browserSession.load()?.email??sessionStorage.getItem('tutormatching.recoveryEmail')??'');
+ const [busy,setBusy]=useState(false);const [error,setError]=useState('');
+ async function submit(event:FormEvent){event.preventDefault();setBusy(true);setError('');try{await gatewayClient.forgotPassword(email.trim());sessionStorage.setItem('tutormatching.recoveryEmail',email.trim());navigate('/auth/check-email');}catch(e){setError(e instanceof Error?e.message:'Unable to send email.');}finally{setBusy(false);}}
+ return <AuthLayout screen="forgot-password" slideNumber={3} slideTitle="We’ll help you get back on track."><AuthHeader description="Enter your email to request a one-time password reset link." title="Forgot password?"/><form className="auth-form" onSubmit={event=>void submit(event)}><TextField autoComplete="email" label="Email address" placeholder="you@example.com" type="email" required maxLength={320} value={email} onChange={e=>setEmail(e.target.value)}/>{error?<p role="alert" className="tm-field__message tm-field__message--error">{error}</p>:null}<Button fullWidth size="large" type="submit" disabled={busy}>{busy?'Sending…':'Send reset link'}</Button></form><Link className="auth-back-link" to="/auth/sign-in">← Back to sign in</Link></AuthLayout>;
 }
 
 export function CheckEmailScreen() {
-  const [resendCooldown, setResendCooldown] = useState(48);
-  useEffect(() => {
-    if (resendCooldown <= 0) return;
-    const timer = window.setInterval(() => setResendCooldown((value) => Math.max(0, value - 1)), 1000);
-    return () => window.clearInterval(timer);
-  }, [resendCooldown]);
-  return (
-    <AuthLayout screen="check-email" slideNumber={4} slideTitle="Secure recovery, without the stress.">
-      <AuthHeader
-        description="A password reset link has been sent to minh@example.com."
-        title="Check your email"
-      />
-      <div className="auth-form auth-form--actions">
-        <Button fullWidth onClick={() => { window.location.href = 'mailto:'; }} size="large">Open email app</Button>
-        <p>Didn’t receive it? <button disabled={resendCooldown > 0} onClick={() => setResendCooldown(48)} type="button">{resendCooldown > 0 ? `Resend in 00:${String(resendCooldown).padStart(2, '0')}` : 'Resend email'}</button></p>
-        <Link className="auth-secondary-action" to="/auth/forgot-password" viewTransition>Use another email</Link>
-      </div>
-    </AuthLayout>
-  );
+ const [cooldown,setCooldown]=useState(60);const [busy,setBusy]=useState(false);const [error,setError]=useState('');
+ const email=sessionStorage.getItem('tutormatching.recoveryEmail')??'';
+ useEffect(()=>{if(cooldown<=0)return;const timer=setTimeout(()=>setCooldown(value=>value-1),1000);return()=>clearTimeout(timer);},[cooldown]);
+ async function resend(){if(!email||busy||cooldown>0)return;setBusy(true);setError('');try{await gatewayClient.forgotPassword(email);setCooldown(60);}catch(e){setError(e instanceof Error?e.message:'Unable to resend email.');}finally{setBusy(false);}}
+ return <AuthLayout screen="check-email" slideNumber={4} slideTitle="Secure recovery, without the stress."><AuthHeader description={`If an active account exists for ${email||'that address'}, a reset link will arrive shortly. The link expires in 30 minutes.`} title="Check your email"/><div className="auth-form auth-form--actions"><p>Check your inbox and spam folder. For the local demo, open Mailpit at localhost:8025.</p>{error?<p role="alert" className="tm-field__message tm-field__message--error">{error}</p>:null}<Button fullWidth disabled={!email||cooldown>0||busy} onClick={()=>void resend()} size="large">{busy?'Sending…':cooldown>0?`Resend in ${cooldown}s`:'Resend email'}</Button><Link className="auth-secondary-action" to="/auth/forgot-password">Use another email</Link><Link className="auth-secondary-action" to="/auth/sign-in">Back to sign in</Link></div></AuthLayout>;
 }
 
 export function ResetPasswordScreen() {
-  const navigate = useMotionNavigate();
-  return (
-    <AuthLayout screen="reset-password" slideNumber={5} slideTitle="A fresh password keeps your learning safe.">
-      <AuthHeader
-        description="Use a strong password you have not used before."
-        title="Create a new password"
-      />
-      <form className="auth-form" onSubmit={(event) => { event.preventDefault(); navigate('/auth/sign-in', { viewTransition: true }); }}>
-        <TextField autoComplete="new-password" label="New password" placeholder="Create a new password" type="password" />
-        <TextField autoComplete="new-password" label="Confirm password" placeholder="Repeat your new password" type="password" />
-        <Button fullWidth size="large" type="submit">Reset password</Button>
-        <p className="auth-hint">Password must include a number and uppercase letter.</p>
-      </form>
-    </AuthLayout>
-  );
+ const [token]=useState(()=>new URLSearchParams(window.location.search).get('token')??'');
+ const [password,setPassword]=useState('');const [confirm,setConfirm]=useState('');const [busy,setBusy]=useState(false);const [done,setDone]=useState(false);const [error,setError]=useState('');
+ useEffect(()=>{if(token)window.history.replaceState(window.history.state,'',window.location.pathname);},[token]);
+ async function submit(event:FormEvent){event.preventDefault();if(password!==confirm){setError('Passwords do not match.');return;}setBusy(true);setError('');try{await gatewayClient.resetPassword(token,password);browserSession.clear();sessionStorage.removeItem('tutormatching.recoveryEmail');setDone(true);}catch(e){setError(e instanceof Error?e.message:'Unable to reset password.');}finally{setBusy(false);}}
+ return <AuthLayout screen="reset-password" slideNumber={5} slideTitle="A fresh password keeps your learning safe."><AuthHeader description={done?'Your password has been updated. Sign in with your new password.':'Choose a password with 12–128 characters.'} title={done?'Password updated':'Create a new password'}/>{done?<Link className="auth-secondary-action" to="/auth/sign-in">Back to sign in →</Link>:!token?<div className="auth-form"><p role="alert">Open the reset link from your email. This page needs a valid link.</p><Link to="/auth/forgot-password">Request a new reset link</Link></div>:<form className="auth-form" onSubmit={event=>void submit(event)}><TextField autoComplete="new-password" label="New password" type="password" required minLength={12} maxLength={128} value={password} onChange={e=>setPassword(e.target.value)}/><TextField autoComplete="new-password" label="Confirm password" type="password" required minLength={12} maxLength={128} value={confirm} onChange={e=>setConfirm(e.target.value)}/>{error?<p role="alert" className="tm-field__message tm-field__message--error">{error}</p>:null}<Button fullWidth size="large" type="submit" disabled={busy}>{busy?'Updating…':'Reset password'}</Button><Link to="/auth/forgot-password">Request a new reset link</Link></form>}</AuthLayout>;
 }
 
 export function VerifyEmailScreen() {

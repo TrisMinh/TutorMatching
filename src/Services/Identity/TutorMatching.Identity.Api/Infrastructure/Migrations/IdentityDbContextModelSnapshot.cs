@@ -22,6 +22,69 @@ namespace TutorMatching.Identity.Api.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("TutorMatching.Identity.Api.Domain.AccountSettings", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("CancellationNoticeHours")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("EmailReminders")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("EnrollmentAlerts")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("InAppNotifications")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("ProfileVisible")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer");
+
+                    b.HasKey("UserId");
+
+                    b.ToTable("account_settings", (string)null);
+                });
+
+            modelBuilder.Entity("TutorMatching.Identity.Api.Domain.PasswordReset", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("ExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .IsFixedLength();
+
+                    b.Property<DateTimeOffset?>("UsedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("UserId", "CreatedAtUtc");
+
+                    b.ToTable("password_resets", (string)null);
+                });
+
             modelBuilder.Entity("TutorMatching.Identity.Api.Domain.RefreshSession", b =>
                 {
                     b.Property<Guid>("Id")
@@ -168,6 +231,24 @@ namespace TutorMatching.Identity.Api.Infrastructure.Migrations
                     b.HasIndex("UserId", "OccurredAtUtc");
 
                     b.ToTable("security_audit_events", (string)null);
+                });
+
+            modelBuilder.Entity("TutorMatching.Identity.Api.Domain.AccountSettings", b =>
+                {
+                    b.HasOne("TutorMatching.Identity.Api.Domain.UserAccount", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("TutorMatching.Identity.Api.Domain.PasswordReset", b =>
+                {
+                    b.HasOne("TutorMatching.Identity.Api.Domain.UserAccount", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("TutorMatching.Identity.Api.Domain.RefreshSession", b =>

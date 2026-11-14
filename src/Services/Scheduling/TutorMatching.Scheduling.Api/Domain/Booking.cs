@@ -64,6 +64,14 @@ public sealed class Booking
     public DateTimeOffset CreatedAtUtc { get; private set; }
     public DateTimeOffset UpdatedAtUtc { get; private set; }
     public int Version { get; private set; }
+    public int CancellationNoticeHours { get; private set; } = 12;
+    public DateTimeOffset CancellationDeadlineUtc => StartAtUtc.AddHours(-CancellationNoticeHours);
+
+    public void SetCancellationPolicy(int hours)
+    {
+        if (!new[] {0,6,12,24,48}.Contains(hours)) throw new ArgumentOutOfRangeException(nameof(hours));
+        CancellationNoticeHours = hours;
+    }
     public TimeSlot Slot => TimeSlot.Create(StartAtUtc, EndAtUtc);
 
     public static Booking ConfirmFromHold(

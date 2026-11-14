@@ -1,3 +1,4 @@
+using TutorMatching.BuildingBlocks.Security;
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using TutorMatching.Tutor.Api.Domain;
@@ -39,12 +40,14 @@ public static class TutorEndpoints
         Guid? subjectId,
         int page,
         int pageSize,
+        AccountDirectoryClient directory,
         TutorDbContext dbContext,
         CancellationToken cancellationToken)
     {
         page = Math.Max(page, 1);
         pageSize = Math.Clamp(pageSize, 1, 100);
-        var query = dbContext.TutorProfiles.AsNoTracking().Where(profile => profile.Status == TutorStatus.Active);
+        var hidden = await directory.HiddenTutorsAsync(cancellationToken);
+        var query = dbContext.TutorProfiles.AsNoTracking().Where(profile => profile.Status == TutorStatus.Active && !hidden.Contains(profile.UserId));
         if (subjectId is not null)
         {
             query = query.Where(profile => profile.Subjects.Any(subject => subject.SubjectId == subjectId));

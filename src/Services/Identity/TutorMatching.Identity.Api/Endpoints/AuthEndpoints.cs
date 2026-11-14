@@ -140,6 +140,11 @@ public static class AuthEndpoints
         var hash = TokenService.HashRefreshToken(request.RefreshToken);
         await using var transaction = dbContext.Database.IsRelational()
             ? await dbContext.Database.BeginTransactionAsync(cancellationToken) : null;
+        if (dbContext.Database.IsRelational())
+        {
+            var owner = await dbContext.RefreshSessions.Where(s => s.TokenHash == hash).Select(s => (Guid?)s.UserId).SingleOrDefaultAsync(cancellationToken);
+            if (owner is not null) await dbContext.Database.ExecuteSqlInterpolatedAsync($"SELECT id FROM user_accounts WHERE id = {owner.Value} FOR UPDATE", cancellationToken);
+        }
         await LockRefreshFamilyAsync(dbContext, hash, cancellationToken);
         var session = dbContext.Database.IsRelational()
             ? (await dbContext.RefreshSessions.FromSqlInterpolated($"SELECT * FROM refresh_sessions WHERE token_hash = {hash} FOR UPDATE").ToListAsync(cancellationToken)).SingleOrDefault()
@@ -187,6 +192,11 @@ public static class AuthEndpoints
         var hash = TokenService.HashRefreshToken(request.RefreshToken);
         await using var transaction = dbContext.Database.IsRelational()
             ? await dbContext.Database.BeginTransactionAsync(cancellationToken) : null;
+        if (dbContext.Database.IsRelational())
+        {
+            var owner = await dbContext.RefreshSessions.Where(s => s.TokenHash == hash).Select(s => (Guid?)s.UserId).SingleOrDefaultAsync(cancellationToken);
+            if (owner is not null) await dbContext.Database.ExecuteSqlInterpolatedAsync($"SELECT id FROM user_accounts WHERE id = {owner.Value} FOR UPDATE", cancellationToken);
+        }
         await LockRefreshFamilyAsync(dbContext, hash, cancellationToken);
         var session = await dbContext.RefreshSessions.SingleOrDefaultAsync(
             candidate => candidate.TokenHash == hash,

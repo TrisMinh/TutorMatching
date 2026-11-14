@@ -1,3 +1,4 @@
+using TutorMatching.BuildingBlocks.Security;
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using TutorMatching.Tutor.Api.Domain;
@@ -8,9 +9,28 @@ public static class CourseEndpoints
 {
     public static void MapCourseEndpoints(this IEndpointRouteBuilder endpoints)
     {
+        var reminderGroup = endpoints.MapGroup("/internal/v1/course-reminders").RequireAuthorization(p=>p.RequireRole("Service").RequireClaim("scope","reminders.read"));
+        reminderGroup.MapGet("/",async(DateTimeOffset from,DateTimeOffset to,TutorDbContext db,CancellationToken ct)=>{
+            if(to<=from||to-from>TimeSpan.FromHours(2))return Results.BadRequest();
+            var rows=await db.CourseSessions.AsNoTracking().Where(s=>s.StartAtUtc>from&&s.StartAtUtc<=to).OrderBy(s=>s.StartAtUtc).Take(1000)
+                .Select(s=>new{s.Id,s.CourseId,s.StartAtUtc}).ToListAsync(ct);
+            var ids=rows.Select(s=>s.CourseId).Distinct().ToArray();
+            var recipients=await db.CourseEnrollments.Where(e=>ids.Contains(e.CourseId)).Select(e=>new{e.CourseId,UserId=e.StudentUserId}).ToListAsync(ct);
+            var teachers=await db.Courses.Where(c=>ids.Contains(c.Id)).Select(c=>new{CourseId=c.Id,UserId=db.TutorProfiles.Where(t=>t.Id==c.TutorId).Select(t=>t.UserId).Single()}).ToListAsync(ct);
+            return Results.Ok(rows.SelectMany(s=>recipients.Concat(teachers).Where(r=>r.CourseId==s.CourseId).Select(r=>new{SessionId=s.Id,r.UserId,s.StartAtUtc})));
+        });
+        reminderGroup.MapGet("/{id:guid}",async(Guid id,Guid recipient,TutorDbContext db,CancellationToken ct)=>{
+            var session=await db.CourseSessions.Where(s=>s.Id==id).Select(s=>new{s.CourseId,s.StartAtUtc,s.EndAtUtc,
+                Title=db.Courses.Where(c=>c.Id==s.CourseId).Select(c=>c.Title).Single(),
+                Teacher=db.Courses.Any(c=>c.Id==s.CourseId&&db.TutorProfiles.Any(t=>t.Id==c.TutorId&&t.UserId==recipient)),
+                Enrolled=db.CourseEnrollments.Any(e=>e.CourseId==s.CourseId&&e.StudentUserId==recipient)}).SingleOrDefaultAsync(ct);
+            return session is null?Results.NotFound():Results.Ok(new{session.Title,session.StartAtUtc,session.EndAtUtc,active=session.Teacher||session.Enrolled,session.CourseId});
+        });
         var group = endpoints.MapGroup("/api/v1/courses").WithTags("Courses");
-        group.MapGet("/enrollment-notifications",async(ClaimsPrincipal user,TutorDbContext db,CancellationToken ct)=>{
+        group.MapGet("/enrollment-notifications",async(ClaimsPrincipal user,TutorDbContext db,AccountDirectoryClient directory,CancellationToken ct)=>{
             var uid=Guid.Parse(user.FindFirstValue("sub")!);
+            var settings=await directory.GetAsync(uid,ct);
+            if(settings is null||!settings.Settings.InAppNotifications||!settings.Settings.EnrollmentAlerts)return Results.Ok(Array.Empty<object>());
             return Results.Ok(await db.EnrollmentNotices.AsNoTracking().Where(n=>n.TutorUserId==uid).OrderByDescending(n=>n.CreatedAtUtc).Take(100).Select(n=>new {
                 Id="enrollment:"+n.Id,Type="CourseEnrolled",Title="New student enrolled",n.CourseId,n.StudentName,
                 ActorName=n.StudentName,n.AvatarUrl,

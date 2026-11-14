@@ -30,9 +30,15 @@ namespace TutorMatching.Scheduling.Api.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<int>("CancellationNoticeHours")
+                        .ValueGeneratedNever()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(12)
+                        .HasColumnName("cancellation_notice_hours");
+
                     b.Property<string>("CancellationReason")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
                         .HasColumnName("cancellation_reason");
 
                     b.Property<DateTimeOffset?>("CancelledAtUtc")

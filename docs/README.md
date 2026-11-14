@@ -18,6 +18,14 @@ Từ **PHẢI**, **KHÔNG ĐƯỢC**, **NÊN** và **CÓ THỂ** mang nghĩa quy
 | QA | [Test strategy](06-testing/test-strategy.md), [E2E scenarios](06-testing/e2e-scenarios.md) |
 | Người demo/vận hành | [Runbook](05-operations/runbook.md), [Sơ đồ](diagrams/README.md) |
 
+## Account experience đã tích hợp
+
+- [Settings và hiệu lực nghiệp vụ](08-account-experience/settings.md)
+- [Quên/đặt lại mật khẩu](08-account-experience/password-recovery.md)
+- [Email reminder booking/course](08-account-experience/email-reminders.md)
+- [Chính sách hủy booking](08-account-experience/cancellation-policy.md)
+- [Bằng chứng kiểm thử các luồng tài khoản](08-account-experience/verification.md)
+
 ## Bản đồ tài liệu
 
 - `00-overview`: phạm vi, công nghệ, lộ trình.

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { App } from '../../app/App';
@@ -59,10 +59,12 @@ describe('tutor routes from Figma', () => {
 
   it('toggles a tutor preference', async () => {
     const user = userEvent.setup();
+    vi.spyOn(gatewayClient,'getSettings').mockResolvedValue({emailReminders:true,inAppNotifications:true,enrollmentAlerts:true,profileVisible:true,cancellationNoticeHours:12,version:0});
     renderAt('/tutor/settings');
-    const toggle = screen.getByRole('switch', { name: 'Auto-accept repeat students' });
-    expect(toggle).toHaveAttribute('aria-checked', 'false');
-    await user.click(toggle);
+    const toggle = await screen.findByRole('switch', { name: 'Email reminders' });
+    await waitFor(()=>expect(toggle).toBeEnabled());
     expect(toggle).toHaveAttribute('aria-checked', 'true');
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute('aria-checked', 'false');
   });
 });

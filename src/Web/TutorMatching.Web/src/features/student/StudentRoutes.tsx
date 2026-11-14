@@ -1,3 +1,4 @@
+import {AccountSettingsPanel} from '../../shared/AccountSettingsPanel';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { gatewayClient, type Booking, type NotificationItem, type StudentProfile, type Subject, type TutorProfile } from '../../api';
@@ -410,6 +411,7 @@ function DetailRows({ rows }: { rows: Array<[string, string]> }) {
 }
 
 export function ReviewBookingScreen() {
+  const heldPolicy = (()=>{try{return JSON.parse(sessionStorage.getItem('tutormatching.booking.hold')??'null') as {cancellationNoticeHours?:number;cancellationDeadlineUtc?:string;expiresAtUtc?:string}|null;}catch{return null;}})();
   const navigate = useMotionNavigate();
   const [confirming, setConfirming] = useState(false);
   const [bookingError, setBookingError] = useState('');
@@ -437,7 +439,7 @@ export function ReviewBookingScreen() {
 
   return (
     <AppShell active="bookings" contentClassName="review-booking" title="Review your booking">
-      <div className="review-layout"><section className="student-card lesson-summary"><h2>Lesson summary</h2><p>Review the details before confirming your lesson.</p><p className="summary-tutor"><span>Tutor</span>Nguyen Minh Anh</p><DetailRows rows={[["Subject","Mathematics • Grade 10"],["Date","Wednesday, 18 November 2026"],["Time","10:30 – 11:30"],["Format","Online lesson"],["Price","150,000₫"]]}/></section><aside><section className="booking-policy"><h2>Booking policy</h2><p>Free cancellation up to 12 hours before the lesson. Your slot is held for 09:42.</p></section>{bookingError ? <p className="tm-field__message tm-field__message--error" role="alert">{bookingError}</p> : null}<Button disabled={confirming} fullWidth onClick={confirm} size="large">{confirming ? 'Confirming…' : 'Confirm booking'}</Button></aside></div>
+      <div className="review-layout"><section className="student-card lesson-summary"><h2>Lesson summary</h2><p>Review the details before confirming your lesson.</p><p className="summary-tutor"><span>Tutor</span>Nguyen Minh Anh</p><DetailRows rows={[["Subject","Mathematics • Grade 10"],["Date","Wednesday, 18 November 2026"],["Time","10:30 – 11:30"],["Format","Online lesson"],["Price","150,000₫"]]}/></section><aside><section className="booking-policy"><h2>Booking policy</h2><p>Cancellation requires {heldPolicy?.cancellationNoticeHours??12} hours’ notice. {heldPolicy?.cancellationDeadlineUtc?`Cancel by ${new Date(heldPolicy.cancellationDeadlineUtc).toLocaleString('en-GB',{timeZone:'Asia/Ho_Chi_Minh'})} (GMT+07).`:''} {heldPolicy?.expiresAtUtc?`Hold expires at ${new Date(heldPolicy.expiresAtUtc).toLocaleTimeString()}.`:''}</p></section>{bookingError ? <p className="tm-field__message tm-field__message--error" role="alert">{bookingError}</p> : null}<Button disabled={confirming} fullWidth onClick={confirm} size="large">{confirming ? 'Confirming…' : 'Confirm booking'}</Button></aside></div>
     </AppShell>
   );
 }
@@ -487,7 +489,7 @@ export function BookingDetailsScreen() {
     ['Time', `${start.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })} – ${end.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })}`],
     ['Format', 'Online • Google Meet'],
     ['Subject ID', booking.subjectId],
-    ['Cancellation', booking.cancelledAtUtc ? 'This booking has been cancelled' : 'Free until 12 hours before the lesson'],
+    ['Cancellation', booking.cancelledAtUtc ? 'This booking has been cancelled' : `${booking.cancellationNoticeHours??12} hours’ notice · Cancel by ${booking.cancellationDeadlineUtc?new Date(booking.cancellationDeadlineUtc).toLocaleString('en-GB',{timeZone:'Asia/Ho_Chi_Minh'}):'the deadline'} (GMT+07)`],
   ] : [['Booking ID','#TM-20261118-1042'],['Date','Wednesday, 18 November 2026'],['Time','10:30 – 11:30'],['Format','Online • Google Meet'],['Notes','Review quadratic equations and practice exam questions.'],['Cancellation','Free until 17 Nov, 22:30']];
 
   async function cancelBooking() {
@@ -503,7 +505,7 @@ export function BookingDetailsScreen() {
   return (
     <AppShell active="bookings" contentClassName="booking-details" title="Booking details">
       <BookingDetailsPanel title={title} status={booking?.status??'Confirmed'} rows={rows} backTo="/student/dashboard" actions={<>
-<Button fullWidth onClick={()=>setActionMessage('The meeting room opens 10 minutes before the lesson.')} size="large">Join lesson</Button><Button fullWidth onClick={()=>navigate('/student/book/select-schedule',{viewTransition:true})} size="large" variant="secondary">Reschedule</Button>{actionMessage?<p className="booking-action-message" aria-live="polite">{actionMessage}</p>:null}{error ? <p className="tm-field__message tm-field__message--error" role="alert">{error}</p> : null}<Button disabled={cancelling || booking?.status === 'Cancelled'} fullWidth onClick={cancelBooking} size="large" variant="danger">{cancelling ? 'Cancelling…' : booking?.status === 'Cancelled' ? 'Booking cancelled' : 'Cancel booking'}</Button>
+<Button fullWidth onClick={()=>setActionMessage('The meeting room opens 10 minutes before the lesson.')} size="large">Join lesson</Button><Button fullWidth onClick={()=>navigate('/student/book/select-schedule',{viewTransition:true})} size="large" variant="secondary">Reschedule</Button>{actionMessage?<p className="booking-action-message" aria-live="polite">{actionMessage}</p>:null}{error ? <p className="tm-field__message tm-field__message--error" role="alert">{error}</p> : null}<Button disabled={cancelling || booking?.status === 'Cancelled' || !!(booking?.cancellationDeadlineUtc && Date.now()>Date.parse(booking.cancellationDeadlineUtc))} fullWidth onClick={cancelBooking} size="large" variant="danger">{cancelling ? 'Cancelling…' : booking?.status === 'Cancelled' ? 'Booking cancelled' : booking?.cancellationDeadlineUtc&&Date.now()>Date.parse(booking.cancellationDeadlineUtc)?'Cancellation window closed':'Cancel booking'}</Button>
       </>}/>
     </AppShell>
   );
@@ -584,19 +586,8 @@ export function StudentProfileScreen() {
   );
 }
 
-function SettingToggle({ defaultOn = false, description, label }: { defaultOn?: boolean; description: string; label: string }) {
-  const [enabled,setEnabled]=useState(defaultOn);
-  return <div className="setting-row"><div><strong>{label}</strong><span>{description}</span></div><button aria-checked={enabled} aria-label={label} className={enabled?'is-on':''} onClick={()=>setEnabled(value=>!value)} role="switch" type="button"><span /></button></div>;
-}
-
 export function StudentSettingsScreen() {
-  const navigate = useMotionNavigate();
-  const [message,setMessage]=useState('');
-  return (
-    <AppShell active="settings" contentClassName="student-settings" title="Settings">
-      <section><h2>Account &amp; preferences</h2><SettingToggle defaultOn label="Email notifications" description="Booking updates, reminders, and account activity"/><SettingToggle defaultOn label="Push notifications" description="Real-time lesson and message alerts"/><SettingToggle label="Marketing updates" description="Product tips and learning offers"/><SettingToggle label="Two-factor authentication" description="Add an extra layer of account security"/><div className="setting-password"><div><strong>Password</strong><span>Last changed 3 months ago</span></div><Button onClick={()=>navigate('/auth/forgot-password',{viewTransition:true})} variant="secondary">Change password</Button></div>{message?<p className="settings-action-message" aria-live="polite">{message}</p>:null}<Button className="delete-account" onClick={()=>setMessage('Account deletion requires email confirmation. We have not deleted any data.')} variant="danger">Delete account</Button></section>
-    </AppShell>
-  );
+ return <AppShell active="settings" contentClassName="student-settings" title="Settings"><AccountSettingsPanel mode="student"/></AppShell>;
 }
 
 export function CourseDetailsScreen() {

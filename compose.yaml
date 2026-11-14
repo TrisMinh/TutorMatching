@@ -64,6 +64,10 @@ services:
         ASSEMBLY_NAME: TutorMatching.Identity.Api
     environment:
       <<: *api-environment
+      Email__Host: mailpit
+      Email__Port: 1025
+      Email__From: no-reply@demo.tutormatching.local
+      Frontend__Origin: ${FRONTEND_ORIGIN:-http://localhost:3000}
       ConnectionStrings__IdentityDb: Host=identity-db;Port=5432;Database=identity_db;Username=identity_app;Password=${POSTGRES_IDENTITY_PASSWORD:-identity_dev}
     depends_on:
       identity-db: { condition: service_healthy }

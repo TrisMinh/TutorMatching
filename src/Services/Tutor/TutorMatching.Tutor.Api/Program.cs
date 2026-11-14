@@ -1,3 +1,4 @@
+using TutorMatching.BuildingBlocks.Security;
 using Microsoft.EntityFrameworkCore;
 using TutorMatching.BuildingBlocks.Hosting;
 using TutorMatching.Tutor.Api.Endpoints;
@@ -9,6 +10,10 @@ builder.Services.AddDbContext<TutorDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("TutorDb")
         ?? "Host=localhost;Port=54322;Database=tutor_db;Username=tutor_app;Password=tutor_dev"));
 builder.Services.AddSingleton(TimeProvider.System);
+ builder.Services.AddHttpClient<AccountDirectoryClient>(client => {
+     client.BaseAddress = new Uri(builder.Configuration["Services:Identity"] ?? "http://identity-service:8080");
+     client.Timeout = TimeSpan.FromSeconds(5);
+ });
 builder.Services.AddHttpClient();
 builder.Services.AddHttpClient("student",client=>client.BaseAddress=new Uri(builder.Configuration["Services:Student"]??"http://student-service:8080"));
 builder.Services.AddHttpClient("scheduling",client=>client.BaseAddress=new Uri(builder.Configuration["Services:Scheduling"]??"http://scheduling-service:8080"));

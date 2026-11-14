@@ -1,3 +1,4 @@
+using TutorMatching.BuildingBlocks.Security;
 using System.Diagnostics;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -43,6 +44,10 @@ public static class BookingEndpoints
         endpoints.MapPost("/internal/v1/slots/query", QueryBookedSlotsAsync)
             .RequireAuthorization()
             .WithTags("Internal");
+        endpoints.MapGet("/internal/v1/reminders/{id:guid}", async(Guid id,SchedulingDbContext db,CancellationToken ct)=>{
+            var b=await db.Bookings.AsNoTracking().SingleOrDefaultAsync(b=>b.Id==id,ct);
+            return b is null?Results.NotFound():Results.Ok(new {title="Private tutoring lesson",b.StartAtUtc,b.EndAtUtc,active=b.Status==BookingStatus.Confirmed,studentUserId=b.StudentUserId,tutorUserId=b.TutorUserId});
+        }).RequireAuthorization(p=>p.RequireRole("Service").RequireClaim("scope","reminders.read"));
         return endpoints;
     }
 
@@ -54,6 +59,7 @@ public static class BookingEndpoints
         IBookingHoldStore holdStore,
         ITutorClient tutorClient,
         IStudentClient studentClient,
+        AccountDirectoryClient directory,
         TimeProvider timeProvider,
         CancellationToken cancellationToken)
     {
@@ -100,6 +106,8 @@ public static class BookingEndpoints
             return Results.Conflict(new { error = "Slot conflicts with a confirmed booking." });
         }
 
+        var tutorAccount = await directory.GetAsync(tutor.TutorUserId, cancellationToken);
+        if (tutorAccount is null || !tutorAccount.Active) return Results.Conflict(new {error="Tutor account is unavailable."});
         var result = await holdStore.TryCreateAsync(
             student.Id,
             student.UserId,
@@ -107,7 +115,7 @@ public static class BookingEndpoints
             tutor.TutorUserId,
             request.SubjectId,
             slot.StartAtUtc,
-            cancellationToken);
+            cancellationToken, tutorAccount.Settings.CancellationNoticeHours);
         if (!result.Created || result.Hold is null)
         {
             return Results.Conflict(new { error = "Slot is temporarily held by another request." });
@@ -118,6 +126,8 @@ public static class BookingEndpoints
             result.Hold.HoldId,
             holdToken = result.HoldToken,
             result.Hold.ExpiresAtUtc,
+            result.Hold.CancellationNoticeHours,
+            cancellationDeadlineUtc = result.Hold.StartAtUtc.AddHours(-result.Hold.CancellationNoticeHours),
         });
     }
 
@@ -185,6 +195,7 @@ public static class BookingEndpoints
             hold.SubjectId,
             TimeSlot.Create(hold.StartAtUtc, hold.EndAtUtc),
             now,tokenHash:hold.TokenHash);
+        booking.SetCancellationPolicy(hold.CancellationNoticeHours);
         var correlationId = GetCorrelationId(httpContext);
         await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
         dbContext.Bookings.Add(booking);
@@ -245,6 +256,8 @@ public static class BookingEndpoints
         if(actor!=booking.StudentUserId&&actor!=booking.TutorUserId)return Results.Forbid();
         if(string.IsNullOrWhiteSpace(reasonCode)||reasonCode.Length>300)return Results.BadRequest(new{error="A cancellation reason of 1–300 characters is required."});
         if(booking.Status==BookingStatus.Confirmed&&booking.StartAtUtc<=timeProvider.GetUtcNow())return Results.Conflict(new{error="A lesson that has already started cannot be cancelled."});
+        if (booking.Status == BookingStatus.Confirmed && actor == booking.StudentUserId && timeProvider.GetUtcNow() > booking.CancellationDeadlineUtc)
+            return Results.Conflict(new {error=$"Cancellation requires at least {booking.CancellationNoticeHours} hours' notice. This booking's cancellation window has closed."});
         try
         {
             if (booking.Cancel(actor, reasonCode, timeProvider.GetUtcNow()))
@@ -322,6 +335,8 @@ public static class BookingEndpoints
         status = booking.Status.ToString(),
         booking.ConfirmedAtUtc,
         booking.CancelledAtUtc,
+        booking.CancellationNoticeHours,
+        booking.CancellationDeadlineUtc,
     };
 }
 

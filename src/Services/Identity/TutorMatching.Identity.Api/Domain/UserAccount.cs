@@ -73,6 +73,12 @@ public sealed class UserAccount
         Version++;
     }
 
+    public void ChangePassword(string hash, DateTimeOffset now)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(hash);
+        PasswordHash = hash; UpdatedAtUtc = now; Version++;
+    }
+
     public void Disable(DateTimeOffset now)
     {
         Status = AccountStatus.Disabled;

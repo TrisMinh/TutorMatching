@@ -1,3 +1,4 @@
+using TutorMatching.BuildingBlocks.Security;
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using TutorMatching.Notification.Api.Domain;
@@ -18,6 +19,7 @@ public static class NotificationEndpoints
     private static async Task<IResult> ListAsync(
         ClaimsPrincipal principal,
         NotificationDbContext dbContext,
+        AccountDirectoryClient directory,
         CancellationToken cancellationToken,
         string? status = null,
         string? type = null,
@@ -27,6 +29,8 @@ public static class NotificationEndpoints
         page = Math.Max(page, 1);
         pageSize = Math.Clamp(pageSize, 1, 100);
         var userId = GetUserId(principal);
+        var account = await directory.GetAsync(userId, cancellationToken);
+        if (account is null || !account.Settings.InAppNotifications) return Results.Ok(new {items=Array.Empty<object>(),page,pageSize,total=0});
         var query = dbContext.Notifications.AsNoTracking()
             .Where(item => item.RecipientUserId == userId);
         if (!string.IsNullOrWhiteSpace(status))

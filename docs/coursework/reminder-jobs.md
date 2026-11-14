@@ -25,6 +25,6 @@ Không claim hàng loạt rồi đợi quá lâu khiến lease hết hạn trư�
 
 ## Độ trễ và giới hạn demo
 
-Polling 15 giây nghĩa là nhắc gần thời điểm due, có thêm độ trễ scheduler/SMTP/retry, không phải hard realtime. SMTP dùng Mailpit, không gửi email production; địa chỉ demo từ recipient ID. Không cần điện thoại/SMS/payment để đạt yêu cầu đề.
+Polling 15 giây nghĩa là nhắc gần thời điểm due, có thêm độ trễ scheduler/SMTP/retry, không phải hard realtime. SMTP dùng Mailpit, không gửi email ra Internet; sender lấy email thật từ Identity và tôn trọng EmailReminders. CourseReminderSync polling 30 giây bổ sung reminder cho course session và người enrolled/instructor. Xem [luồng email chi tiết](../08-account-experience/email-reminders.md). Không cần điện thoại/SMS/payment để đạt yêu cầu đề.
 
 Khi chấm có thể xem ReminderSchedule/DeliveryAttempt ở database, queue/consumer ở RabbitMQ và email ở Mailpit. Unit tests kiểm idempotency, cancellation, reminder state; integration multi-worker dùng database tạm và email sender kiểm thử để kiểm mỗi reminder được claim đúng một lần.

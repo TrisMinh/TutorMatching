@@ -10,15 +10,37 @@ public interface IEmailSender
     Task SendReminderAsync(Guid recipientUserId, Guid bookingId, CancellationToken cancellationToken);
 }
 
-public sealed class SmtpEmailSender(IConfiguration configuration) : IEmailSender
+public sealed class ReminderSuppressedException : Exception { }
+public sealed record ReminderDetails(string Title, DateTimeOffset StartAtUtc, DateTimeOffset EndAtUtc, bool Active, Guid? StudentUserId, Guid? TutorUserId);
+
+public sealed class SmtpEmailSender(IConfiguration configuration,
+    TutorMatching.BuildingBlocks.Security.AccountDirectoryClient directory, NotificationDbContext db,
+    IHttpClientFactory clients, TimeProvider clock) : IEmailSender
 {
     public async Task SendReminderAsync(Guid recipientUserId, Guid bookingId, CancellationToken cancellationToken)
     {
+        var account = await directory.GetAsync(recipientUserId, cancellationToken);
+        if (account is null || !account.Active || !account.Settings.EmailReminders) throw new ReminderSuppressedException();
+        var isCourse = await db.ReminderSchedules.AnyAsync(r => r.BookingId == bookingId && r.RecipientUserId == recipientUserId && r.ReminderType == "CourseOneHour", cancellationToken);
+        var target = isCourse ? $"/internal/v1/course-reminders/{bookingId}?recipient={recipientUserId}" : $"/internal/v1/reminders/{bookingId}";
+        using var request = new HttpRequestMessage(HttpMethod.Get, target);
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer",
+            TutorMatching.BuildingBlocks.Security.AccountDirectoryClient.CreateToken(configuration, "reminders.read"));
+        using var response = await clients.CreateClient(isCourse ? "tutor-reminders" : "scheduling-reminders").SendAsync(request, cancellationToken);
+        if (response.StatusCode == HttpStatusCode.NotFound) throw new ReminderSuppressedException();
+        response.EnsureSuccessStatusCode();
+        var details = await response.Content.ReadFromJsonAsync<ReminderDetails>(cancellationToken) ?? throw new InvalidOperationException("Missing reminder context.");
+        if (!details.Active || details.StartAtUtc <= clock.GetUtcNow() || (!isCourse && details.StudentUserId != recipientUserId && details.TutorUserId != recipientUserId)) throw new ReminderSuppressedException();
+        var zone = TimeZoneInfo.FindSystemTimeZoneById("Asia/Ho_Chi_Minh");
+        var start = TimeZoneInfo.ConvertTime(details.StartAtUtc, zone);
+        var end = TimeZoneInfo.ConvertTime(details.EndAtUtc, zone);
+        var origin = configuration["Frontend:Origin"] ?? "http://localhost:3000";
+        var link = origin.TrimEnd('/') + "/" + (account.Role == "Tutor" ? "tutor" : "student") + "/dashboard";
         using var message = new MailMessage(
             configuration["Email:From"] ?? "no-reply@demo.tutormatching.local",
-            $"{recipientUserId:N}@demo.tutormatching.local",
-            "TutorMatching session reminder",
-            $"Your tutoring session for booking {bookingId} starts in one hour.");
+            account.Email,
+            "Upcoming lesson: " + details.Title,
+            $"{details.Title}\n{start:dd MMM yyyy, HH:mm} – {end:HH:mm} (GMT+07:00 Vietnam)\nYour lesson starts soon. View your schedule: {link}\nManage email reminders in Settings.");
         using var client = new SmtpClient(
             configuration["Email:Host"] ?? "localhost",
             configuration.GetValue("Email:Port", 1025))
@@ -106,6 +128,7 @@ public sealed partial class ReminderWorker(
                 CompletedAtUtc = timeProvider.GetUtcNow(),
             });
         }
+        catch (ReminderSuppressedException) { reminder.Cancel(); }
         catch (Exception exception) when (!cancellationToken.IsCancellationRequested)
         {
             reminder.MarkFailed(exception.Message, timeProvider.GetUtcNow(), maxAttempts: 5);

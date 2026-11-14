@@ -8,7 +8,7 @@ test('settings pairs compact preferences with animated buddy and responsive cont
  const first=await page.locator('.companion-bubble strong').textContent();await page.getByRole('button',{name:'Say hello to Teach Buddy'}).click();await expect(page.locator('.companion-bubble strong')).not.toHaveText(first!);
  await page.getByRole('button',{name:'Pause companion animation'}).click();await expect(companion).toHaveClass(/is-paused/);expect(await page.locator('.buddy-robot').evaluate(el=>getComputedStyle(el).animationPlayState)).toBe('paused');
  await page.getByRole('button',{name:'Play companion animation'}).click();
- const toggle=page.getByRole('switch',{name:'Booking reminders'});await toggle.click();await expect(toggle).toHaveAttribute('aria-checked','false');
+ const toggle=page.getByRole('switch',{name:'Email reminders'});await toggle.click();await expect(toggle).toHaveAttribute('aria-checked','false');
  for(const width of [390,768,1600]){await page.setViewportSize({width,height:1000});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();}
  await page.screenshot({path:'test-results/settings-buddy-desktop.png',fullPage:true});
  for(const size of [{width:1366,height:650},{width:1440,height:768},{width:1920,height:900}]){

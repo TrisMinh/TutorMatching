@@ -24,6 +24,7 @@ var app = builder.Build();
 
 app.MapTutorMatchingDefaults();
 app.MapAuthEndpoints();
+app.MapAccountEndpoints();
 app.MapGet("/", () => Results.Ok(new { service = "identity", status = "ok" })).AllowAnonymous();
 
 await using (var scope = app.Services.CreateAsyncScope())

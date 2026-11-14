@@ -29,6 +29,7 @@ public static class ServiceDefaultsExtensions
             };
         });
         builder.Services.AddHealthChecks();
+        builder.Services.AddExceptionHandler<DependencyExceptionHandler>();
         builder.Services.AddSingleton(new ServiceInstance(serviceName, Environment.MachineName));
         builder.Services.AddRateLimiter(options =>
         {

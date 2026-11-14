@@ -5,6 +5,17 @@ namespace TutorMatching.Scheduling.Tests;
 public sealed class BookingTests
 {
     [Fact]
+    public void CancellationDeadlineUsesBookingPolicySnapshot()
+    {
+        var now = new DateTimeOffset(2026,11,14,10,0,0,TimeSpan.Zero);
+        var booking = CreateBooking(now);
+        booking.SetCancellationPolicy(24);
+        Assert.Equal(booking.StartAtUtc.AddHours(-24), booking.CancellationDeadlineUtc);
+        Assert.Throws<ArgumentOutOfRangeException>(()=>booking.SetCancellationPolicy(-1));
+        Assert.Throws<ArgumentOutOfRangeException>(()=>booking.SetCancellationPolicy(999));
+    }
+
+    [Fact]
     public void ConfirmFromHoldCreatesConfirmedBooking()
     {
         var now = new DateTimeOffset(2026, 11, 14, 10, 0, 0, TimeSpan.Zero);

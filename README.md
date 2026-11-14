@@ -11,6 +11,7 @@ Nền tảng ghép cặp gia sư và học sinh theo khung giờ, kết hợp đ
 - **Lịch:** hiển thị booking và session khóa học theo ngày/tuần, chọn ngày từ lịch nhỏ, đổi múi giờ và chuyển đến buổi học của khóa đã chọn.
 - **Tương tác:** tìm kiếm có gợi ý, thông báo dropdown, toast, bộ lọc và chọn kích thước thẻ khóa học; điều hướng giữ nguyên app shell.
 - **Ràng buộc:** kiểm tra trùng giờ của Tutor/Student, Redis hold có thời hạn, transaction và database constraint khi xác nhận.
+- **Tài khoản:** Settings lưu theo tài khoản, khôi phục mật khẩu bằng email một lần và chính sách hủy chụp vào từng booking.
 - **Tác vụ nền:** Transactional Outbox, RabbitMQ, notification và reminder trước buổi học một giờ; retry hữu hạn và cơ chế phục hồi.
 
 ## Giao diện thực tế
@@ -130,6 +131,7 @@ npm run test:e2e:live
 Kiểm tra tích hợp từ thư mục gốc, trên stack demo cục bộ:
 
 ```powershell
+node scripts/verify-account-features.mjs
 node scripts/audit-schedule.mjs
 node scripts/verify-tutor-workflow.mjs
 node scripts/verify-ha.mjs
@@ -149,6 +151,7 @@ python scripts/verify-database-recovery.py
 | Số instance và điều phối | [Instances & load balancing](docs/03-platform/instances-load-balancing.md) |
 | Lỗi, retry và rollback | [Retry & recovery](docs/03-platform/retry-rollback-recovery.md) |
 | Kịch bản trình bày | [Demo và kiểm chứng](docs/coursework/demo-and-verification.md) |
+| Settings, recovery, reminder và policy | [Account experience](docs/08-account-experience/settings.md) |
 | Danh mục toàn bộ tài liệu | [Docs index](docs/README.md) |
 
 ## Các nhánh

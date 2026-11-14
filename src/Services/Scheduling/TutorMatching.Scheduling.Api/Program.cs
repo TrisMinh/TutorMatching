@@ -1,3 +1,4 @@
+using TutorMatching.BuildingBlocks.Security;
 using Microsoft.EntityFrameworkCore;
 using StackExchange.Redis;
 using TutorMatching.BuildingBlocks.Hosting;
@@ -10,6 +11,10 @@ builder.Services.AddDbContext<SchedulingDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("SchedulingDb")
         ?? "Host=localhost;Port=54324;Database=scheduling_db;Username=scheduling_app;Password=scheduling_dev"));
 builder.Services.AddSingleton(TimeProvider.System);
+ builder.Services.AddHttpClient<AccountDirectoryClient>(client => {
+     client.BaseAddress = new Uri(builder.Configuration["Services:Identity"] ?? "http://identity-service:8080");
+     client.Timeout = TimeSpan.FromSeconds(5);
+ });
 builder.Services.AddSingleton<IConnectionMultiplexer>(_ => StackExchange.Redis.ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("Redis")??"redis:6379,abortConnect=false"));
 builder.Services.AddSingleton<IBookingHoldStore, RedisBookingHoldStore>();
 builder.Services.AddHttpClient<ITutorClient, TutorClient>(client =>

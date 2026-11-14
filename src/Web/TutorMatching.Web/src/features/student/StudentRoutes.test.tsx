@@ -75,11 +75,14 @@ describe('student routes from Figma', () => {
 
   it('toggles an account preference accessibly', async () => {
     const user = userEvent.setup();
+    vi.spyOn(gatewayClient,'getSettings').mockResolvedValue({emailReminders:true,inAppNotifications:true,enrollmentAlerts:true,profileVisible:true,cancellationNoticeHours:12,version:0});
     renderAt('/student/settings');
-    const marketing = screen.getByRole('switch', { name: 'Marketing updates' });
+    const marketing = await screen.findByRole('switch', { name: 'Email reminders' });
 
-    expect(marketing).toHaveAttribute('aria-checked', 'false');
-    await user.click(marketing);
+    await waitFor(()=>expect(marketing).toBeEnabled());
     expect(marketing).toHaveAttribute('aria-checked', 'true');
+    await user.click(marketing);
+    expect(marketing).toHaveAttribute('aria-checked', 'false');
+    vi.restoreAllMocks();
   });
 });

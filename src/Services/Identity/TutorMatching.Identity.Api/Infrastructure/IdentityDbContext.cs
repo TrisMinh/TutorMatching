@@ -9,8 +9,22 @@ public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> option
     public DbSet<RefreshSession> RefreshSessions => Set<RefreshSession>();
     public DbSet<SecurityAuditEvent> SecurityAuditEvents => Set<SecurityAuditEvent>();
 
+    public DbSet<AccountSettings> AccountSettings => Set<AccountSettings>();
+    public DbSet<PasswordReset> PasswordResets => Set<PasswordReset>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        var preferences = modelBuilder.Entity<AccountSettings>();
+        preferences.ToTable("account_settings");
+        preferences.HasKey(s => s.UserId);
+        preferences.Property(s => s.Version).IsConcurrencyToken();
+        preferences.HasOne<UserAccount>().WithMany().HasForeignKey(s => s.UserId).OnDelete(DeleteBehavior.Cascade);
+        var resets = modelBuilder.Entity<PasswordReset>();
+        resets.ToTable("password_resets");resets.HasKey(r => r.Id);
+        resets.Property(r => r.TokenHash).HasMaxLength(64).IsFixedLength();
+        resets.HasIndex(r => r.TokenHash).IsUnique();
+        resets.HasIndex(r => new {r.UserId,r.CreatedAtUtc});
+        resets.HasOne<UserAccount>().WithMany().HasForeignKey(r => r.UserId).OnDelete(DeleteBehavior.Cascade);
         var users = modelBuilder.Entity<UserAccount>();
         users.ToTable("user_accounts");
         users.HasKey(account => account.Id);

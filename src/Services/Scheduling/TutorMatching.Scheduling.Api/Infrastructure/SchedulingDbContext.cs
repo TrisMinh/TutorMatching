@@ -35,11 +35,13 @@ public sealed class SchedulingDbContext(DbContextOptions<SchedulingDbContext> op
         bookings.Property(booking => booking.ConfirmedAtUtc).HasColumnName("confirmed_at_utc");
         bookings.Property(booking => booking.CancelledAtUtc).HasColumnName("cancelled_at_utc");
         bookings.Property(booking => booking.CancelledByUserId).HasColumnName("cancelled_by_user_id");
-        bookings.Property(booking => booking.CancellationReason).HasColumnName("cancellation_reason").HasMaxLength(50);
+        bookings.Property(booking => booking.CancellationReason).HasColumnName("cancellation_reason").HasMaxLength(300);
         bookings.Property(booking => booking.CreatedAtUtc).HasColumnName("created_at_utc");
         bookings.Property(booking => booking.UpdatedAtUtc).HasColumnName("updated_at_utc");
         bookings.Property(booking => booking.Version).HasColumnName("version").IsConcurrencyToken();
         bookings.Ignore(booking => booking.Slot);
+        bookings.Ignore(booking => booking.CancellationDeadlineUtc);
+        bookings.Property(booking => booking.CancellationNoticeHours).HasColumnName("cancellation_notice_hours").HasDefaultValue(12).ValueGeneratedNever();
         bookings.Property<NpgsqlRange<DateTimeOffset>>("SlotRange")
             .HasColumnName("slot_range")
             .HasColumnType("tstzrange")

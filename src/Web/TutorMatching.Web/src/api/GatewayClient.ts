@@ -1,4 +1,5 @@
 import {resilientFetch} from './resilientFetch';
+export type AccountPreferences = {emailReminders:boolean;inAppNotifications:boolean;enrollmentAlerts:boolean;profileVisible:boolean;cancellationNoticeHours:number;version:number};
 export type AccountRole = 'Student' | 'Tutor';
 
 export type AuthSession = {
@@ -89,6 +90,8 @@ export type StudentProfile = {
   interests: Array<{ subjectId: string; priority: number }>;
 };
 export type Booking = {
+  cancellationNoticeHours?:number;
+  cancellationDeadlineUtc?:string;
   id: string;
   studentId: string;
   tutorId: string;
@@ -99,7 +102,7 @@ export type Booking = {
   confirmedAtUtc?: string | null;
   cancelledAtUtc?: string | null;
 };
-export type BookingHold = { holdId: string; holdToken: string; expiresAtUtc: string };
+export type BookingHold = { cancellationNoticeHours?:number; cancellationDeadlineUtc?:string; holdId: string; holdToken: string; expiresAtUtc: string };
 export type NotificationItem = {
   courseId?: string;
   className?: string;
@@ -141,6 +144,10 @@ export class GatewayClient {
     this.session = session;
   }
 
+  getSettings() { return this.request<AccountPreferences>('/api/v1/users/me/settings'); }
+  saveSettings(settings:AccountPreferences) { return this.request<AccountPreferences>('/api/v1/users/me/settings',{method:'PUT',body:JSON.stringify(settings)}); }
+  forgotPassword(email:string) { return this.request<void>('/api/v1/auth/forgot-password',{method:'POST',body:JSON.stringify({email})},false); }
+  resetPassword(token:string,password:string) { return this.request<void>('/api/v1/auth/reset-password',{method:'POST',body:JSON.stringify({token,password})},false); }
   async register(input: { email: string; password: string; role: AccountRole }) {
     return this.request<{ id: string; email: string; role: AccountRole; status: string }>(
       '/api/v1/auth/register',

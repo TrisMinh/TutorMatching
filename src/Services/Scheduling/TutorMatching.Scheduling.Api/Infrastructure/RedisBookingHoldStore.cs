@@ -16,7 +16,7 @@ public sealed record BookingHold(
     DateTimeOffset EndAtUtc,
     string TokenHash,
     DateTimeOffset ExpiresAtUtc,
-    IReadOnlyList<string> LockKeys);
+    IReadOnlyList<string> LockKeys, int CancellationNoticeHours = 12);
 
 public sealed record HoldCreationResult(bool Created, BookingHold? Hold, string? HoldToken);
 
@@ -29,7 +29,7 @@ public interface IBookingHoldStore
         Guid tutorUserId,
         Guid subjectId,
         DateTimeOffset startAtUtc,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken, int cancellationNoticeHours = 12);
 
     Task<BookingHold?> GetAsync(Guid holdId, CancellationToken cancellationToken);
 
@@ -56,7 +56,7 @@ public sealed class RedisBookingHoldStore(
         Guid tutorUserId,
         Guid subjectId,
         DateTimeOffset startAtUtc,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken, int cancellationNoticeHours = 12)
     {
         cancellationToken.ThrowIfCancellationRequested();
         var database = connection.GetDatabase();
@@ -76,7 +76,7 @@ public sealed class RedisBookingHoldStore(
             startAtUtc.AddHours(1),
             tokenHash,
             expiry,
-            lockKeys);
+            lockKeys, cancellationNoticeHours);
         var keys = lockKeys.Select(key => (RedisKey)key).Append((RedisKey)MetadataKey(holdId)).ToArray();
         var result = (long)await database.ScriptEvaluateAsync(
             CreateScript,

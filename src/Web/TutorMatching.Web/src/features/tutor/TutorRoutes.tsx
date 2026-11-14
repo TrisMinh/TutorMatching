@@ -1,3 +1,4 @@
+import {AccountSettingsPanel} from '../../shared/AccountSettingsPanel';
 import { useCallback, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { gatewayClient, type GatewayError, type NotificationItem } from '../../api';
@@ -95,14 +96,8 @@ export function TutorNotifications() {
   </>);
 }
 
-function TutorToggle({defaultOn=false,description,label}:{defaultOn?:boolean;description:string;label:string}) {
-  const [on,setOn]=useState(defaultOn); return <div className="setting-row"><div><strong>{label}</strong><span>{description}</span></div><button aria-checked={on} aria-label={label} className={on?'is-on':''} onClick={()=>setOn(value=>!value)} role="switch" type="button"><span/></button></div>;
-}
-
 export function TutorSettings() {
-  const [saved,setSaved]=useState(false);
-  const [editingPolicy,setEditingPolicy]=useState(false);
-  return tutorShell('settings','Settings','tutor-settings',<SettingsViewport><div className="settings-layout"><section className="student-card tutor-settings-card"><h2>Tutor preferences</h2><TutorToggle label="Auto-accept repeat students" description="Automatically approve requests from existing students"/><TutorToggle defaultOn label="Booking reminders" description="Email and push alerts before lessons"/><TutorToggle defaultOn label="New request alerts" description="Notify immediately for booking requests"/><TutorToggle defaultOn label="Profile visibility" description="Allow students to find your profile"/><div className="tutor-policy"><div><strong>Cancellation policy</strong><span>{editingPolicy?'Choose a new policy in the next release.':'Free cancellation up to 12 hours before a lesson'}</span></div><Button onClick={()=>setEditingPolicy(value=>!value)} variant="secondary">{editingPolicy?'Done':'Edit policy'}</Button></div>{saved?<p className="tutor-settings-message" aria-live="polite">Settings saved</p>:null}<Button className="tutor-settings-save" onClick={()=>setSaved(true)} size="large">Save settings</Button></section><SettingsCompanion/></div></SettingsViewport>);
+  return tutorShell('settings','Settings','tutor-settings',<SettingsViewport><div className="settings-layout"><AccountSettingsPanel mode="tutor"/><SettingsCompanion/></div></SettingsViewport>);
 }
 
 export const tutorRoutes=[
