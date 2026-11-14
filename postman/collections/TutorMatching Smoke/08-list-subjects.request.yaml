@@ -1,0 +1,14 @@
+$kind: http-request
+name: List subjects
+order: 8000
+url: '{{baseUrl}}/api/v1/subjects'
+method: GET
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('subjects returned', () => pm.response.to.have.status(200));
+      const subjects = pm.response.json();
+      pm.expect(subjects.length).to.be.above(0);
+      pm.collectionVariables.set('subjectId', subjects[0].id);

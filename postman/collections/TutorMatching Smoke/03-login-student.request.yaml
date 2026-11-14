@@ -1,0 +1,20 @@
+$kind: http-request
+name: Login student
+order: 3000
+url: '{{baseUrl}}/api/v1/auth/login'
+method: POST
+headers:
+  Content-Type: application/json
+auth:
+  type: noauth
+body:
+  type: json
+  content: |-
+    {"email":"student-{{runId}}@example.test","password":"{{password}}"}
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('student authenticated', () => pm.response.to.have.status(200));
+      const body = pm.response.json();
+      pm.expect(body.accessToken).to.be.a('string').and.not.empty;
+      pm.collectionVariables.set('studentToken', body.accessToken);

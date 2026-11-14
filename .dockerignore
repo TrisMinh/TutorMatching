@@ -1,0 +1,9 @@
+.git
+.worktrees
+.superpowers
+**/bin
+**/obj
+TestResults
+coverage
+.env
+

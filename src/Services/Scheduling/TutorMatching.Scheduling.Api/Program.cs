@@ -24,6 +24,15 @@ app.MapTutorMatchingDefaults();
 app.MapBookingEndpoints();
 app.MapGet("/", () => Results.Ok(new { service = "scheduling", status = "ok" })).AllowAnonymous();
 
+await using (var scope = app.Services.CreateAsyncScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<SchedulingDbContext>();
+    if (dbContext.Database.IsRelational())
+    {
+        await dbContext.Database.MigrateAsync();
+    }
+}
+
 app.Run();
 
 public partial class Program;

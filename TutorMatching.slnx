@@ -29,6 +29,9 @@
   <Folder Name="/tests/BuildingBlocks/">
     <Project Path="tests/BuildingBlocks/TutorMatching.BuildingBlocks.Tests/TutorMatching.BuildingBlocks.Tests.csproj" />
   </Folder>
+  <Folder Name="/tests/Gateway/">
+    <Project Path="tests/Gateway/TutorMatching.Gateway.Tests/TutorMatching.Gateway.Tests.csproj" />
+  </Folder>
   <Folder Name="/tests/Identity/">
     <Project Path="tests/Identity/TutorMatching.Identity.Tests/TutorMatching.Identity.Tests.csproj" />
   </Folder>

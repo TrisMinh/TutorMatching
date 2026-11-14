@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
+using TutorMatching.Notification.Api.Domain;
 using TutorMatching.Notification.Api.Infrastructure;
 
 namespace TutorMatching.Notification.Api.Endpoints;
@@ -17,13 +18,40 @@ public static class NotificationEndpoints
     private static async Task<IResult> ListAsync(
         ClaimsPrincipal principal,
         NotificationDbContext dbContext,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? status = null,
+        string? type = null,
+        int page = 1,
+        int pageSize = 20)
     {
+        page = Math.Max(page, 1);
+        pageSize = Math.Clamp(pageSize, 1, 100);
         var userId = GetUserId(principal);
-        var rows = await dbContext.Notifications.AsNoTracking()
-            .Where(item => item.RecipientUserId == userId)
+        var query = dbContext.Notifications.AsNoTracking()
+            .Where(item => item.RecipientUserId == userId);
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            if (!Enum.TryParse<ReadStatus>(status, true, out var parsedStatus))
+            {
+                return Results.ValidationProblem(new Dictionary<string, string[]>
+                {
+                    ["status"] = ["Status must be Unread or Read."],
+                });
+            }
+
+            query = query.Where(item => item.Status == parsedStatus);
+        }
+
+        if (!string.IsNullOrWhiteSpace(type))
+        {
+            query = query.Where(item => item.Type == type);
+        }
+
+        var total = await query.CountAsync(cancellationToken);
+        var rows = await query
             .OrderByDescending(item => item.CreatedAtUtc)
-            .Take(100)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(item => new
             {
                 item.Id,
@@ -36,7 +64,7 @@ public static class NotificationEndpoints
                 item.ReadAtUtc,
             })
             .ToListAsync(cancellationToken);
-        return Results.Ok(rows);
+        return Results.Ok(new { items = rows, page, pageSize, total });
     }
 
     private static async Task<IResult> MarkReadAsync(

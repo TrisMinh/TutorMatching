@@ -1,0 +1,20 @@
+$kind: http-request
+name: Set tutor subject
+order: 9000
+url: '{{baseUrl}}/api/v1/tutors/me/subjects'
+method: PUT
+headers:
+  Content-Type: application/json
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{tutorToken}}'
+body:
+  type: json
+  content: |-
+    [{"subjectId":"{{subjectId}}","proficiencyLevel":2}]
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('tutor subject saved', () => pm.response.to.have.status(204));

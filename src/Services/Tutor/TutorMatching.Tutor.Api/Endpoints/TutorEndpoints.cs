@@ -58,6 +58,7 @@ public static class TutorEndpoints
                 profile.ExperienceYears,
                 profile.AvatarUrl,
                 subjects = profile.Subjects.Select(subject => new { subject.SubjectId, subject.ProficiencyLevel }),
+                availability = profile.AvailabilityWindows.Select(window => new { window.StartAtUtc, window.EndAtUtc }),
             })
             .ToListAsync(cancellationToken);
         return Results.Ok(new { items, page, pageSize, total });

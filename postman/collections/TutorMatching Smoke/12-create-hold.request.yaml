@@ -1,0 +1,18 @@
+$kind: http-request
+name: Create booking hold
+order: 12000
+url: '{{baseUrl}}/api/v1/bookings/holds'
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {"tutorId":"{{tutorId}}","subjectId":"{{subjectId}}","startAtUtc":"{{bookingStart}}"}
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('hold created', () => pm.response.to.have.status(201));
+      const body = pm.response.json();
+      pm.collectionVariables.set('holdId', body.holdId);
+      pm.collectionVariables.set('holdToken', body.holdToken);

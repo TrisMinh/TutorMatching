@@ -25,6 +25,15 @@ app.MapTutorMatchingDefaults();
 app.MapAuthEndpoints();
 app.MapGet("/", () => Results.Ok(new { service = "identity", status = "ok" })).AllowAnonymous();
 
+await using (var scope = app.Services.CreateAsyncScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
+    if (dbContext.Database.IsRelational())
+    {
+        await dbContext.Database.MigrateAsync();
+    }
+}
+
 app.Run();
 
 public partial class Program;

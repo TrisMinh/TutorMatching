@@ -18,6 +18,15 @@ app.MapTutorMatchingDefaults();
 app.MapNotificationEndpoints();
 app.MapGet("/", () => Results.Ok(new { service = "notification", status = "ok" })).AllowAnonymous();
 
+await using (var scope = app.Services.CreateAsyncScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<NotificationDbContext>();
+    if (dbContext.Database.IsRelational())
+    {
+        await dbContext.Database.MigrateAsync();
+    }
+}
+
 app.Run();
 
 public partial class Program;

@@ -1,0 +1,11 @@
+$kind: http-request
+name: Gateway health
+order: 1000
+url: '{{baseUrl}}/health/ready'
+method: GET
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('gateway is ready', () => pm.response.to.have.status(200));
