@@ -1,0 +1,30 @@
+@startuml redis-hold-flow
+!include _style.puml
+title Redis Atomic Hold Flow
+start
+:Validate JWT Student, slot grid, horizon;
+:Validate Tutor subject + availability;
+:Query confirmed overlap in SchedulingDb;
+if (Dependency valid?) then (yes)
+  :Lua checks tutor/student overlap keys\n(start-30, start, start+30);
+  if (Any lock exists?) then (yes)
+    :Return 409 + remaining PTTL;
+    stop
+  else (no)
+    :SET tutor locks NX PX 300000;
+    :SET student locks NX PX 300000;
+    :SET hold metadata + tokenHash PX 300000;
+    :Return 201 holdId, one-time token, expiresAtUtc;
+  endif
+else (no)
+  :Return 422 or 503;
+endif
+stop
+
+legend bottom
+Redis hold hỗ trợ UX và giảm contention.
+PostgreSQL exclusion constraint vẫn là nguồn quyết định khi confirm.
+Release chỉ compare-and-delete đúng owner/token; commit DB trước release.
+endlegend
+@enduml
+

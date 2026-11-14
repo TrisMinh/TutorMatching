@@ -1,0 +1,32 @@
+skinparam backgroundColor #F7F8FA
+skinparam defaultFontName Arial
+skinparam defaultFontColor #24324A
+skinparam shadowing false
+skinparam roundCorner 8
+skinparam ArrowColor #53627A
+skinparam ArrowThickness 1
+skinparam packageBorderColor #9AA6B5
+skinparam packageBackgroundColor #FFFFFF
+skinparam componentBorderColor #53627A
+skinparam componentBackgroundColor #FFFFFF
+skinparam databaseBorderColor #53627A
+skinparam databaseBackgroundColor #EEF2F7
+skinparam classBorderColor #53627A
+skinparam classBackgroundColor #FFFFFF
+skinparam classAttributeIconSize 0
+skinparam sequenceLifeLineBorderColor #9AA6B5
+skinparam sequenceParticipantBorderColor #53627A
+skinparam sequenceParticipantBackgroundColor #FFFFFF
+skinparam sequenceGroupBorderColor #9AA6B5
+skinparam sequenceGroupBackgroundColor #F7F8FA
+skinparam stateBorderColor #53627A
+skinparam stateBackgroundColor #FFFFFF
+skinparam noteBorderColor #D07835
+skinparam noteBackgroundColor #FFF5EA
+
+!define CORE_BG #FFF1E6
+!define CORE_BORDER #B85C24
+!define SYNC_COLOR #2E5AA8
+!define ASYNC_COLOR #6B7280
+!define STORE_BG #EEF2F7
+

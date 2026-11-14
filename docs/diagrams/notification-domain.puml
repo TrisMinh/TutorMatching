@@ -1,0 +1,36 @@
+@startuml notification-domain
+!include _style.puml
+title Notification Domain
+
+class Notification <<Aggregate Root>> {
+  +Id: UUID
+  +RecipientUserId: UUID
+  +Type: NotificationType
+  +Status: ReadStatus
+  +MarkRead()
+}
+class ReminderSchedule <<Aggregate Root>> {
+  +BookingId: UUID
+  +ScheduledForUtc: instant
+  +Status: DeliveryStatus
+  +Claim()
+  +MarkSent()
+  +Retry()
+  +Cancel()
+}
+class DeliveryAttempt <<Entity>>
+class ProcessedEvent <<Inbox Record>>
+enum DeliveryStatus {
+  Pending
+  Processing
+  Sent
+  Cancelled
+  Failed
+}
+
+ReminderSchedule "1" *-- "0..*" DeliveryAttempt
+ReminderSchedule --> DeliveryStatus
+ProcessedEvent ..> Notification : idempotent creation
+ProcessedEvent ..> ReminderSchedule : idempotent scheduling
+@enduml
+

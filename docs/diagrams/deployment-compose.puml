@@ -1,0 +1,47 @@
+@startuml deployment-compose
+!include _style.puml
+title TutorMatching - Docker Compose Deployment
+top to bottom direction
+
+node "Host / Docker Engine" {
+  frame "frontend network" {
+    node "web\n3000:3000" as Web
+    node "gateway\n8080:8080" as Gateway
+  }
+  frame "backend network" {
+    node "identity-service\n8080" as I
+    node "tutor-service\n8080" as T
+    node "student-service\n8080" as S
+    node "scheduling-service\n8080" as Sch #FFF1E6
+    node "notification-service\n8080" as N
+  }
+  frame "data network" {
+    database "5 PostgreSQL containers\n5432 internal" as PG
+    node "redis\n6379" as R
+    node "rabbitmq\n5672 / 15672 dev" as MQ
+    node "mailpit\n1025 / 8025 dev" as Mail
+  }
+}
+
+Web -[#2E5AA8]-> Gateway : HTTP 8080
+Gateway -[#2E5AA8]-> I
+Gateway -[#2E5AA8]-> T
+Gateway -[#2E5AA8]-> S
+Gateway -[#2E5AA8]-> Sch
+Gateway -[#2E5AA8]-> N
+I --> PG
+T --> PG
+S --> PG
+Sch --> PG
+Sch --> R
+Sch -[#6B7280,dashed]-> MQ
+MQ -[#6B7280,dashed]-> N
+N --> PG
+N -[#6B7280,dashed]-> Mail
+
+note bottom
+Host ports 8081-8085 và 54321-54325 chỉ thuộc debug profile, bind loopback.
+App health: /health/live và /health/ready.
+end note
+@enduml
+

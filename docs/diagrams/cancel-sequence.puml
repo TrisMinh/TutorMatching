@@ -1,0 +1,27 @@
+@startuml cancel-sequence
+!include _style.puml
+title Cancel Booking
+autonumber
+actor Participant
+participant Gateway
+participant "Scheduling Service" as Scheduling #FFF1E6
+database SchedulingDb
+
+Participant -> Gateway : DELETE /api/v1/bookings/{id}
+Gateway -> Scheduling : JWT sub/role + reasonCode
+Scheduling -> SchedulingDb : load Booking
+Scheduling -> Scheduling : authorize participant; Cancel()
+alt Confirmed
+  Scheduling -> SchedulingDb : transaction UPDATE Cancelled\n+ INSERT BookingCancelled Outbox
+  SchedulingDb --> Scheduling : COMMIT
+  Scheduling --> Gateway : 204
+  Gateway --> Participant : 204
+else already Cancelled
+  Scheduling --> Gateway : 204 idempotent, no new event
+  Gateway --> Participant : 204
+else not participant
+  Scheduling --> Gateway : 403/404
+  Gateway --> Participant : 403/404
+end
+@enduml
+
