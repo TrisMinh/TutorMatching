@@ -4,11 +4,11 @@ import './auth.css';
 
 const tutorSlides = [
   {
-    image: '/assets/figma/auth-tutor-03.jpg',
+    image: '/assets/figma/auth-tutor-02.jpg',
     title: 'Learn better, together.',
   },
   {
-    image: '/assets/figma/auth-tutor-02.jpg',
+    image: '/assets/figma/auth-tutor-03.jpg',
     title: 'Guidance that fits your goals.',
   },
   {
@@ -18,9 +18,9 @@ const tutorSlides = [
 ];
 
 const steps = [
-  ['01', 'Find your tutor', 'Browse verified tutors by subject and availability.'],
-  ['02', 'Get connected', 'Book a time that works for both of you.'],
-  ['03', 'Learn one-to-one', 'Grow with personalized support and feedback.'],
+  ['01', 'Find your tutor'],
+  ['02', 'Get connected'],
+  ['03', 'Learn one-to-one'],
 ];
 
 type AuthLayoutProps = {
@@ -64,9 +64,12 @@ export function AuthLayout({ children, screen, slideNumber, slideTitle }: AuthLa
           <img alt="" src={tutorSlides[activeSlide].image} />
         </div>
         <footer className="auth-entry__footer">
-          <a href="/privacy">Privacy Policy</a>
-          <span aria-hidden="true">·</span>
-          <a href="/terms">Terms of Service</a>
+          <span className="auth-entry__copyright">© Teach. All rights reserved.</span>
+          <span className="auth-entry__legal">
+            <a href="/privacy">Privacy Policy</a>
+            <span aria-hidden="true">·</span>
+            <a href="/terms">Terms of Service</a>
+          </span>
         </footer>
       </section>
 
@@ -97,18 +100,7 @@ export function AuthLayout({ children, screen, slideNumber, slideTitle }: AuthLa
           <div className="auth-showcase__story">
             <div>
               <h3>{slideTitle || tutorSlides[activeSlide].title}</h3>
-              <p>Personalized guidance, flexible schedules, real progress.</p>
-            </div>
-            <p className="auth-showcase__counter">
-              <strong>{slideNumber}</strong> / 9
-            </p>
-          </div>
-
-          <div className="auth-showcase__controls">
-            <div className="auth-showcase__dots" aria-hidden="true">
-              {tutorSlides.map((_, index) => (
-                <span className={index === activeSlide ? 'is-active' : ''} key={index} />
-              ))}
+              <p>Personal support, built around how you learn.</p>
             </div>
             <div className="auth-showcase__arrows">
               <button aria-label="Previous slide" onClick={() => changeSlide(-1)} type="button">
@@ -120,17 +112,28 @@ export function AuthLayout({ children, screen, slideNumber, slideTitle }: AuthLa
             </div>
           </div>
 
+          <p className="auth-showcase__counter">
+            <strong>{String(activeSlide + 1).padStart(2, '0')}</strong> / 03
+          </p>
+
+          <div className="auth-showcase__controls">
+            <div className="auth-showcase__dots" aria-hidden="true">
+              {tutorSlides.map((_, index) => (
+                <span className={index === activeSlide ? 'is-active' : ''} key={index} />
+              ))}
+            </div>
+          </div>
+
           <div className="auth-showcase__steps">
-            {steps.map(([number, title, description]) => (
+            {steps.map(([number, title]) => (
               <article key={number}>
                 <span>{number}</span>
                 <h3>{title}</h3>
-                <p>{description}</p>
               </article>
             ))}
           </div>
 
-          <p className="auth-showcase__note">A better match makes every lesson count.</p>
+          <p className="auth-showcase__note">Here to teach? Connect with students who need your expertise.</p>
         </div>
       </aside>
     </main>

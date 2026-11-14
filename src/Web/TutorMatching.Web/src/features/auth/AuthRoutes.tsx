@@ -1,4 +1,4 @@
-import { useRef, useState, type ChangeEvent, type FormEvent, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type KeyboardEvent } from 'react';
 import { GatewayError, gatewayClient } from '../../api';
 import { Button } from '../../design-system/Button';
 import { TextField } from '../../design-system/TextField';
@@ -82,7 +82,7 @@ export function SignInScreen({ error = false }: { error?: boolean }) {
       slideTitle={error ? 'Try again — your learning space is waiting.' : 'Learn better, together.'}
     >
       <AuthHeader
-        description="Sign in to continue to your TutorMatching account."
+        description="Log in to find your tutor or connect with students."
         title="Welcome back!"
       />
       <div className="auth-role-block">
@@ -94,7 +94,7 @@ export function SignInScreen({ error = false }: { error?: boolean }) {
           autoComplete="email"
           label="Email address"
           onChange={(event) => setEmail(event.target.value)}
-          placeholder="you@example.com"
+          placeholder="Enter your email address"
           type="email"
           value={email}
         />
@@ -103,7 +103,7 @@ export function SignInScreen({ error = false }: { error?: boolean }) {
           error={submitError || undefined}
           label="Password"
           onChange={(event) => setPassword(event.target.value)}
-          placeholder="Enter password"
+          placeholder="Enter your password"
           type="password"
           value={password}
         />
@@ -115,11 +115,11 @@ export function SignInScreen({ error = false }: { error?: boolean }) {
           <Link to="/auth/forgot-password" viewTransition>Forgot password?</Link>
         </div>
         <Button disabled={submitting} fullWidth size="large" type="submit">
-          {submitting ? 'Signing in…' : 'Sign in'}
+          {submitting ? 'Logging in…' : 'Log in'}
         </Button>
       </form>
       <p className="auth-switch-link">
-        New here? <Link to="/auth/sign-up" viewTransition>Create account</Link>
+        Don’t have an account? <Link to="/auth/sign-up" viewTransition>Sign up</Link>
       </p>
     </AuthLayout>
   );
@@ -181,13 +181,14 @@ export function SignUpScreen() {
 }
 
 export function ForgotPasswordScreen() {
+  const navigate = useMotionNavigate();
   return (
     <AuthLayout screen="forgot-password" slideNumber={3} slideTitle="We’ll help you get back on track.">
       <AuthHeader
         description="Enter your email and we’ll send a secure reset link."
         title="Forgot password?"
       />
-      <form className="auth-form" onSubmit={(event) => event.preventDefault()}>
+      <form className="auth-form" onSubmit={(event) => { event.preventDefault(); navigate('/auth/check-email', { viewTransition: true }); }}>
         <TextField autoComplete="email" label="Email address" placeholder="you@example.com" type="email" />
         <Button fullWidth size="large" type="submit">Send reset link</Button>
       </form>
@@ -198,6 +199,12 @@ export function ForgotPasswordScreen() {
 }
 
 export function CheckEmailScreen() {
+  const [resendCooldown, setResendCooldown] = useState(48);
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = window.setInterval(() => setResendCooldown((value) => Math.max(0, value - 1)), 1000);
+    return () => window.clearInterval(timer);
+  }, [resendCooldown]);
   return (
     <AuthLayout screen="check-email" slideNumber={4} slideTitle="Secure recovery, without the stress.">
       <AuthHeader
@@ -205,8 +212,8 @@ export function CheckEmailScreen() {
         title="Check your email"
       />
       <div className="auth-form auth-form--actions">
-        <Button fullWidth size="large">Open email app</Button>
-        <p>Didn’t receive it? <button type="button">Resend in 00:48</button></p>
+        <Button fullWidth onClick={() => { window.location.href = 'mailto:'; }} size="large">Open email app</Button>
+        <p>Didn’t receive it? <button disabled={resendCooldown > 0} onClick={() => setResendCooldown(48)} type="button">{resendCooldown > 0 ? `Resend in 00:${String(resendCooldown).padStart(2, '0')}` : 'Resend email'}</button></p>
         <Link className="auth-secondary-action" to="/auth/forgot-password" viewTransition>Use another email</Link>
       </div>
     </AuthLayout>
@@ -214,13 +221,14 @@ export function CheckEmailScreen() {
 }
 
 export function ResetPasswordScreen() {
+  const navigate = useMotionNavigate();
   return (
     <AuthLayout screen="reset-password" slideNumber={5} slideTitle="A fresh password keeps your learning safe.">
       <AuthHeader
         description="Use a strong password you have not used before."
         title="Create a new password"
       />
-      <form className="auth-form" onSubmit={(event) => event.preventDefault()}>
+      <form className="auth-form" onSubmit={(event) => { event.preventDefault(); navigate('/auth/sign-in', { viewTransition: true }); }}>
         <TextField autoComplete="new-password" label="New password" placeholder="Create a new password" type="password" />
         <TextField autoComplete="new-password" label="Confirm password" placeholder="Repeat your new password" type="password" />
         <Button fullWidth size="large" type="submit">Reset password</Button>

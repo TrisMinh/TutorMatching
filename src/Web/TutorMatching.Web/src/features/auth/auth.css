@@ -1,7 +1,10 @@
 .auth-page {
+  width: 100%;
+  max-width: 1440px;
   min-height: 900px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  margin: 0 auto;
   background: #fff;
   color: var(--color-ink);
 }
@@ -44,9 +47,9 @@
 .auth-entry__content {
   position: absolute;
   top: 150px;
-  left: 50%;
+  left: 145px;
   width: min(430px, calc(100% - 64px));
-  transform: translateX(-50%);
+  transform: none;
 }
 
 .auth-page--sign-up .auth-entry__content,
@@ -340,14 +343,18 @@
 .auth-entry__footer {
   position: absolute;
   bottom: 38px;
-  left: 0;
+  right: 56px;
+  left: 56px;
   display: flex;
-  width: 100%;
-  justify-content: center;
-  gap: 5px;
+  justify-content: space-between;
   color: var(--color-muted);
   font-size: 12px;
   line-height: 18px;
+}
+
+.auth-entry__legal {
+  display: inline-flex;
+  gap: 5px;
 }
 
 .auth-entry__footer a {
@@ -360,7 +367,7 @@
 
 .auth-showcase {
   min-width: 0;
-  padding: 24px 24px 24px 0;
+  padding: 24px;
 }
 
 .auth-showcase__inner {
@@ -384,12 +391,12 @@
 
 .auth-showcase h2 {
   position: absolute;
-  top: 74px;
+  top: 96px;
   left: 48px;
   font-family: var(--font-semibold);
   font-size: 40px;
   font-weight: 600;
-  line-height: 50px;
+  line-height: 56px;
   letter-spacing: -0.8px;
 }
 
@@ -399,49 +406,55 @@
 
 .auth-showcase__intro {
   position: absolute;
-  top: 186px;
+  top: 220px;
   left: 48px;
-  width: 480px;
+  width: 576px;
   color: var(--color-muted);
-  font-size: 15px;
-  line-height: 22px;
+  font-size: 17px;
+  line-height: 24px;
 }
 
 .auth-carousel {
   position: absolute;
-  top: 268px;
+  top: 292px;
   left: 0;
   width: 100%;
-  height: 300px;
+  height: 310px;
 }
 
 .auth-carousel__photo,
 .auth-carousel__peek {
   position: absolute;
-  height: 300px;
+  top: 14px;
+  height: 272px;
   overflow: hidden;
-  border-radius: 14px;
+  border: 4px solid #fff;
+  border-radius: 16px;
 }
 
 .auth-carousel__photo {
-  left: 80px;
-  width: calc(100% - 160px);
+  top: 0;
+  left: 56px;
+  width: 520px;
+  height: 300px;
   z-index: 1;
 }
 
 .auth-carousel__peek {
-  width: 48px;
-  opacity: 0.72;
+  width: 52px;
+  opacity: 0.65;
 }
 
 .auth-carousel__peek--left {
   left: 0;
-  border-radius: 0 14px 14px 0;
+  border-left: 0;
+  border-radius: 0 16px 16px 0;
 }
 
 .auth-carousel__peek--right {
   right: 0;
-  border-radius: 14px 0 0 14px;
+  border-right: 0;
+  border-radius: 16px 0 0 16px;
 }
 
 .auth-carousel img {
@@ -451,7 +464,7 @@
 }
 
 .auth-carousel__peek img {
-  width: 160px;
+  width: 520px;
 }
 
 .auth-carousel__peek--left img {
@@ -464,7 +477,7 @@
 
 .auth-showcase__story {
   position: absolute;
-  top: 594px;
+  top: 618px;
   right: 48px;
   left: 48px;
   display: flex;
@@ -474,100 +487,114 @@
 }
 
 .auth-showcase__story h3 {
-  max-width: 470px;
+  max-width: 414px;
   font-family: var(--font-semibold);
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 600;
-  line-height: 29px;
+  line-height: 31px;
 }
 
 .auth-showcase__story p {
-  margin-top: 4px;
+  margin-top: 0;
   color: var(--color-muted);
-  font-size: 13px;
-  line-height: 19px;
+  font-size: 14px;
+  line-height: 20px;
 }
 
 .auth-showcase__counter {
+  position: absolute;
+  top: 690px;
+  left: 48px;
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 12px;
+  line-height: 17px;
   white-space: nowrap;
 }
 
 .auth-showcase__counter strong {
-  color: var(--color-ink);
+  color: var(--color-muted);
   font-family: var(--font-semibold);
-  font-size: 16px;
+  font-size: 12px;
 }
 
 .auth-showcase__controls {
   position: absolute;
-  top: 665px;
-  right: 48px;
-  left: 48px;
+  top: 680px;
+  left: 276px;
+  width: 120px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
 }
 
 .auth-showcase__dots {
   display: flex;
-  gap: 7px;
+  align-items: center;
+  gap: 16px;
 }
 
 .auth-showcase__dots span {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: #c9d2df;
 }
 
 .auth-showcase__dots span.is-active {
-  width: 20px;
+  width: 24px;
   border-radius: 999px;
   background: var(--color-primary);
 }
 
 .auth-showcase__arrows {
   display: flex;
-  gap: 8px;
+  gap: 10px;
 }
 
 .auth-showcase__arrows button {
   display: grid;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   place-items: center;
   border: 1px solid var(--color-border);
-  border-radius: 50%;
+  border-radius: 14px;
   background: #fff;
   color: var(--color-ink);
   cursor: pointer;
   font-size: 17px;
 }
 
+.auth-showcase__arrows button:last-child {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: #fff;
+}
+
 .auth-showcase__steps {
   position: absolute;
-  top: 727px;
+  top: 730px;
   right: 48px;
   left: 48px;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
+  gap: 18px;
 }
 
 .auth-showcase__steps article {
   position: relative;
   min-width: 0;
-  min-height: 74px;
+  min-height: 70px;
   border: 1px solid #e6eaf0;
-  border-radius: 10px;
-  padding: 11px 10px 9px 35px;
-  background: rgb(255 255 255 / 70%);
+  border-radius: 12px;
+  padding: 33px 14px 8px;
+  background: #fff;
 }
 
 .auth-showcase__steps article > span {
   position: absolute;
   top: 11px;
-  left: 10px;
+  left: 14px;
   color: var(--color-primary);
   font-family: var(--font-semibold);
   font-size: 10px;
@@ -576,29 +603,19 @@
 .auth-showcase__steps h3 {
   overflow: hidden;
   font-family: var(--font-semibold);
-  font-size: 11px;
-  line-height: 16px;
+  font-size: 15px;
+  line-height: 21px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.auth-showcase__steps p {
-  display: -webkit-box;
-  margin-top: 3px;
-  overflow: hidden;
-  color: var(--color-muted);
-  font-size: 9px;
-  line-height: 13px;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
 .auth-showcase__note {
   position: absolute;
-  bottom: 14px;
+  bottom: 16px;
   left: 48px;
   color: var(--color-muted);
-  font-size: 10px;
+  font-size: 13px;
+  line-height: 18px;
 }
 
 @media (max-width: 1100px) {
@@ -704,7 +721,12 @@
 
   .auth-entry__footer {
     position: static;
+    justify-content: center;
     margin-top: 20px;
+  }
+
+  .auth-entry__copyright {
+    display: none;
   }
 
   .auth-page:not(.auth-page--sign-in) .auth-mobile-photo {

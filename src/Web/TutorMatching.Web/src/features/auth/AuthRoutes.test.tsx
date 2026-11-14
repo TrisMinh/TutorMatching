@@ -80,7 +80,7 @@ describe('authentication routes from Figma', () => {
 
     await user.type(screen.getByLabelText('Email address'), 'minh@example.com');
     await user.type(screen.getByLabelText('Password'), 'TutorMatching!123');
-    await user.click(screen.getByRole('button', { name: 'Sign in' }));
+    await user.click(screen.getByRole('button', { name: 'Log in' }));
 
     expect(gatewayClient.login).toHaveBeenCalledWith(
       { email: 'minh@example.com', password: 'TutorMatching!123' },
@@ -98,7 +98,7 @@ describe('authentication routes from Figma', () => {
 
     await user.type(screen.getByLabelText('Email address'), 'minh@example.com');
     await user.type(screen.getByLabelText('Password'), 'wrong-password');
-    await user.click(screen.getByRole('button', { name: 'Sign in' }));
+    await user.click(screen.getByRole('button', { name: 'Log in' }));
 
     expect(await screen.findByLabelText('Password')).toHaveAccessibleDescription(
       'Invalid credentials or session.',

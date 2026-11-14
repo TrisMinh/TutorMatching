@@ -45,6 +45,31 @@ test('desktop auth composition keeps its exact two-panel surface', async ({ page
   await expectHealthyVisualSurface(page);
 });
 
+test('wide desktop centers the 1440 Figma canvas without shifting the form', async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 900 });
+  await page.goto('/auth/sign-in');
+
+  expect(await page.locator('.auth-page').boundingBox()).toEqual({ x: 240, y: 0, width: 1440, height: 900 });
+  expect(await page.locator('.auth-entry__content').boundingBox()).toMatchObject({ x: 385, width: 430 });
+  await expectHealthyVisualSurface(page);
+});
+
+test('student dashboard restores the original weekly calendar and interactions', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/student/dashboard');
+
+  await expect(page.getByRole('heading', { name: 'My Schedule' })).toBeVisible();
+  const calendarBox = await page.locator('.legacy-calendar').boundingBox();
+  expect(calendarBox?.width).toBeCloseTo(820, 1);
+  expect(calendarBox?.height).toBeCloseTo(455, 1);
+  await expect(page.locator('.legacy-event')).toHaveCount(4);
+  await page.getByRole('button', { name: 'Next week' }).click();
+  await expect(page.getByText('09 – 15 March')).toBeVisible();
+  await page.getByRole('tab', { name: 'Webinar' }).click();
+  await expect(page.getByRole('tab', { name: 'Webinar' })).toHaveAttribute('aria-selected', 'true');
+  await expectHealthyVisualSurface(page);
+});
+
 test('mobile student search uses the Figma bottom navigation', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/student/find-tutors');

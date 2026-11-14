@@ -28,6 +28,7 @@ function formatLesson(booking: Booking) {
 }
 
 export function TutorDashboard() {
+  const navigate = useMotionNavigate();
   const loadBookings = useCallback(() => gatewayClient.listBookings(), []);
   const { data: remoteBookings } = useGatewayResource<Booking[] | null>(loadBookings, null);
   const fixtureLessons = [['09:00','Mathematics • Lan Anh','Starts in 24 minutes'],['11:00','Physics • Quang Minh','Online lesson'],['15:30','Mathematics • Thu Trang','Online lesson'],['19:00','Exam prep • Gia Huy','Online lesson']];
@@ -35,7 +36,7 @@ export function TutorDashboard() {
   const stats = [['Upcoming lessons',String(remoteBookings?.length ?? 8),'This week'],['Pending requests','3','This week'],['Hours taught','126','This week'],['Profile views','1,284','+18% this month']];
   return tutorShell('dashboard','Welcome back, Minh Anh','tutor-dashboard',<>
     <div className="tutor-stats">{stats.map(([label,value,note])=><article className="student-card" key={label}><span>{label}</span><strong>{value}</strong><small>{note}</small></article>)}</div>
-    <div className="tutor-dashboard__columns"><section className="student-card tutor-today"><h2>Today’s schedule</h2>{lessons.map(([time,title,note],index)=><article className={index===0?'is-next':''} key={time}><p><strong>{time}</strong>　{title}</p><span>{note}</span></article>)}</section><section className="student-card tutor-request-summary"><h2>Booking requests</h2>{[['Bao • Grade 9','Requested Wed, 18 Nov • 18:00'],['Linh • Grade 12','Requested Thu, 19 Nov • 18:00'],['Huy • Grade 10','Requested Fri, 20 Nov • 18:00']].map(([name,time])=><article key={name}><div><strong>{name}</strong><span>{time}</span></div><Button>Review</Button></article>)}</section></div>
+    <div className="tutor-dashboard__columns"><section className="student-card tutor-today"><h2>Today’s schedule</h2>{lessons.map(([time,title,note],index)=><article className={index===0?'is-next':''} key={time}><p><strong>{time}</strong>　{title}</p><span>{note}</span></article>)}</section><section className="student-card tutor-request-summary"><h2>Booking requests</h2>{[['Bao • Grade 9','Requested Wed, 18 Nov • 18:00'],['Linh • Grade 12','Requested Thu, 19 Nov • 18:00'],['Huy • Grade 10','Requested Fri, 20 Nov • 18:00']].map(([name,time])=><article key={name}><div><strong>{name}</strong><span>{time}</span></div><Button onClick={()=>navigate('/tutor/requests',{viewTransition:true})}>Review</Button></article>)}</section></div>
   </>);
 }
 
@@ -77,6 +78,7 @@ export function SubjectsPricing() {
   const { data: apiSubjects } = useGatewayResource<Subject[] | null>(loadSubjects, null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [editingSubject, setEditingSubject] = useState('');
   const cards = apiSubjects?.slice(0, 3).map((subject, index) => [subject.name, index === 0 ? 'Grade 8–12' : 'Grade 10–12', `${150 + index * 10},000₫`]) ?? [['Mathematics','Grade 8–12','150,000₫'],['Physics','Grade 10–12','160,000₫'],['Exam preparation','High school','180,000₫']];
 
   async function saveSubjects() {
@@ -96,7 +98,7 @@ export function SubjectsPricing() {
     }
   }
 
-  return tutorShell('profile','Subjects and pricing','tutor-subjects',<section className="student-card tutor-subject-card"><h2>What do you teach?</h2><p>Add subjects, levels, and your hourly rate.</p>{cards.map(([subject,level,price])=><article key={subject}><div><strong>{subject}</strong><span>{level}</span></div><p><strong>{price}</strong> / hour</p><Button variant="secondary">Edit</Button></article>)}<Button className="tutor-add-subject" variant="secondary">+ Add subject</Button>{error ? <p className="tm-field__message tm-field__message--error" role="alert">{error}</p> : null}<Button className="tutor-subject-save" disabled={saving} onClick={saveSubjects} size="large">{saving ? 'Saving…' : 'Save changes'}</Button></section>);
+  return tutorShell('profile','Subjects and pricing','tutor-subjects',<section className="student-card tutor-subject-card"><h2>What do you teach?</h2><p>Add subjects, levels, and your hourly rate.</p>{cards.map(([subject,level,price])=><article key={subject}><div><strong>{subject}</strong><span>{level}</span></div><p><strong>{price}</strong> / hour</p><Button onClick={()=>setEditingSubject(subject)} variant="secondary">{editingSubject===subject?'Editing':'Edit'}</Button></article>)}<Button className="tutor-add-subject" onClick={()=>setEditingSubject('New subject')} variant="secondary">+ Add subject</Button>{editingSubject?<p className="tutor-added" aria-live="polite">{editingSubject} is ready to edit.</p>:null}{error ? <p className="tm-field__message tm-field__message--error" role="alert">{error}</p> : null}<Button className="tutor-subject-save" disabled={saving} onClick={saveSubjects} size="large">{saving ? 'Saving…' : 'Save changes'}</Button></section>);
 }
 
 export function TutorAvailability() {
@@ -127,11 +129,16 @@ export function TutorAvailability() {
 const requests=[['Nguyen Bao • Grade 9','Mathematics • Wed, 18 Nov, 18:00',1],['Tran Linh • Grade 10','Physics • Thu 19 Nov, 19:00',3],['Le Huy • Grade 11','Math • Sat 21 Nov, 15:30',2],['Pham Mai • Grade 12','Exam prep • Sun 22 Nov, 09:00',1]] as const;
 
 export function TutorRequests() {
-  const [accepted,setAccepted]=useState<string[]>([]);
-  return tutorShell('bookings','Booking requests','tutor-requests',<><div className="tutor-request-tabs"><button className="is-active">Pending</button><button>Accepted</button><button>Declined</button></div><div className="tutor-request-list">{requests.map(([name,detail,image])=><article className="student-card" key={name}><img alt="" src={`/assets/figma/student-tutor-${image}.jpg`}/><div><h2>{name}</h2><p>{detail}</p><span>“Need help preparing for the next test.”</span></div>{accepted.includes(name)?<strong className="request-accepted">Request accepted</strong>:<div className="tutor-request-actions"><Button onClick={()=>setAccepted(current=>[...current,name])} variant="danger">Decline</Button><Button onClick={()=>setAccepted(current=>[...current,name])}>Accept</Button></div>}</article>)}</div></>);
+  const [activeTab,setActiveTab]=useState<'Pending'|'Accepted'|'Declined'>('Pending');
+  const [statuses,setStatuses]=useState<Record<string,'Pending'|'Accepted'|'Declined'>>({});
+  const [lastAction,setLastAction]=useState('');
+  const visibleRequests=requests.filter(([name])=>(statuses[name]??'Pending')===activeTab);
+  function updateRequest(name:string,status:'Accepted'|'Declined') { setStatuses(current=>({...current,[name]:status})); setLastAction(`Request ${status.toLowerCase()}`); }
+  return tutorShell('bookings','Booking requests','tutor-requests',<>{lastAction?<p className="tutor-request-feedback" aria-live="polite">{lastAction}</p>:null}<div className="tutor-request-tabs" role="tablist">{(['Pending','Accepted','Declined'] as const).map(tab=><button aria-selected={activeTab===tab} className={activeTab===tab?'is-active':''} key={tab} onClick={()=>setActiveTab(tab)} role="tab" type="button">{tab}</button>)}</div><div className="tutor-request-list">{visibleRequests.length?visibleRequests.map(([name,detail,image])=><article className="student-card" key={name}><img alt="" src={`/assets/figma/student-tutor-${image}.jpg`}/><div><h2>{name}</h2><p>{detail}</p><span>“Need help preparing for the next test.”</span></div>{activeTab==='Pending'?<div className="tutor-request-actions"><Button onClick={()=>updateRequest(name,'Declined')} variant="danger">Decline</Button><Button onClick={()=>updateRequest(name,'Accepted')}>Accept</Button></div>:<strong className="request-accepted">Request {activeTab.toLowerCase()}</strong>}</article>):<p className="tutor-empty-state">No {activeTab.toLowerCase()} requests.</p>}</div></>);
 }
 
 export function TutorSchedule() {
+  const navigate = useMotionNavigate();
   const loadBookings = useCallback(() => gatewayClient.listBookings(), []);
   const { data: remoteBookings } = useGatewayResource<Booking[] | null>(loadBookings, null);
   const days=['Tue 17','Wed 18','Thu 19','Fri 20','Sat 21','Sun 22','Mon 23'];
@@ -140,13 +147,15 @@ export function TutorSchedule() {
     const lesson = formatLesson(booking);
     return [lesson.time, lesson.title, lesson.note];
   }) ?? [['09:00','Mathematics • Bao','Online lesson • 60 min'],['11:00','Physics • Linh','Online lesson • 60 min'],['15:30','Math • Trang','Online lesson • 60 min'],['19:00','Exam prep • Huy','Online lesson • 60 min']];
-  return tutorShell('schedule','Schedule','tutor-schedule',<><section className="student-card tutor-calendar"><div className="tutor-calendar__head"><h2>17 – 23 November 2026</h2><span>Asia/Ho_Chi_Minh</span></div><div className="tutor-calendar__days">{days.map(day=><span key={day}>{day}</span>)}</div><div className="tutor-calendar__grid">{cells.map(cell=><div className={cell.label?(cell.index===1||cell.index===29?'is-blue':'has-lesson'):''} key={cell.index}>{cell.label?cell.label.split('|').map(value=><span key={value}>{value}</span>):null}</div>)}</div></section><section className="tutor-mobile-schedule"><h2>18 November 2026</h2>{mobileLessons.map(([time,title,note],index)=><article key={`${time}-${title}`}><time>{time}</time><div className={index===0?'is-next':''}><strong>{title}</strong><span>{note}</span></div></article>)}</section></>,'Tutor schedule');
+  return tutorShell('schedule','Schedule','tutor-schedule',<><section className="student-card tutor-calendar"><div className="tutor-calendar__head"><h2>17 – 23 November 2026</h2><span>Asia/Ho_Chi_Minh</span></div><div className="tutor-calendar__days">{days.map(day=><span key={day}>{day}</span>)}</div><div className="tutor-calendar__grid">{cells.map(cell=><div className={cell.label?(cell.index===1||cell.index===29?'is-blue has-action':'has-lesson has-action'):''} key={cell.index} onClick={cell.label?()=>navigate('/tutor/lessons/18-nov-math',{viewTransition:true}):undefined} onKeyDown={cell.label?(event)=>{if(event.key==='Enter'||event.key===' ')navigate('/tutor/lessons/18-nov-math',{viewTransition:true});}:undefined} role={cell.label?'button':undefined} tabIndex={cell.label?0:undefined}>{cell.label?cell.label.split('|').map(value=><span key={value}>{value}</span>):null}</div>)}</div></section><section className="tutor-mobile-schedule"><h2>18 November 2026</h2>{mobileLessons.map(([time,title,note],index)=><article key={`${time}-${title}`} onClick={()=>navigate('/tutor/lessons/18-nov-math',{viewTransition:true})}><time>{time}</time><div className={index===0?'is-next':''}><strong>{title}</strong><span>{note}</span></div></article>)}</section></>,'Tutor schedule');
 }
 
 function TutorDetailRows({rows}:{rows:Array<[string,string]>}) { return <div className="tutor-detail-rows">{rows.map(([label,value])=><div key={label}><span>{label}</span><strong>{value}</strong></div>)}</div>; }
 
 export function TutorLessonDetails() {
-  return tutorShell('schedule','Lesson details','tutor-lesson-detail',<div className="tutor-detail-layout"><section className="student-card tutor-detail-card"><h2>Mathematics with Nguyen Bao</h2><span className="booking-status">Confirmed</span><TutorDetailRows rows={[["Student","Nguyen Bao • Grade 9"],["Date","Wednesday, 18 November 2026"],["Time","18:00 – 19:00"],["Format","Online • Google Meet"],["Student goal","Prepare for algebra midterm"],["Tutor notes","Bring practice set #4 and review common mistakes."]]}/></section><aside><Button fullWidth size="large">Start lesson</Button><Button fullWidth size="large" variant="secondary">Message student</Button><Button fullWidth size="large" variant="danger">Cancel lesson</Button></aside></div>);
+  const navigate=useMotionNavigate();
+  const [message,setMessage]=useState('');
+  return tutorShell('schedule','Lesson details','tutor-lesson-detail',<div className="tutor-detail-layout"><section className="student-card tutor-detail-card"><h2>Mathematics with Nguyen Bao</h2><span className="booking-status">Confirmed</span><TutorDetailRows rows={[["Student","Nguyen Bao • Grade 9"],["Date","Wednesday, 18 November 2026"],["Time","18:00 – 19:00"],["Format","Online • Google Meet"],["Student goal","Prepare for algebra midterm"],["Tutor notes","Bring practice set #4 and review common mistakes."]]}/></section><aside><Button fullWidth onClick={()=>setMessage('The meeting room opens 10 minutes before the lesson.')} size="large">Start lesson</Button><Button fullWidth onClick={()=>navigate('/tutor/requests',{viewTransition:true})} size="large" variant="secondary">Message student</Button><Button fullWidth onClick={()=>setMessage('Cancellation request prepared. Confirm it from the booking record.')} size="large" variant="danger">Cancel lesson</Button>{message?<p className="tutor-action-message" aria-live="polite">{message}</p>:null}</aside></div>);
 }
 
 export function TutorPublicProfile() {
@@ -186,7 +195,9 @@ function TutorToggle({defaultOn=false,description,label}:{defaultOn?:boolean;des
 }
 
 export function TutorSettings() {
-  return tutorShell('settings','Settings','tutor-settings',<section className="student-card tutor-settings-card"><h2>Tutor preferences</h2><TutorToggle label="Auto-accept repeat students" description="Automatically approve requests from existing students"/><TutorToggle defaultOn label="Booking reminders" description="Email and push alerts before lessons"/><TutorToggle defaultOn label="New request alerts" description="Notify immediately for booking requests"/><TutorToggle defaultOn label="Profile visibility" description="Allow students to find your profile"/><div className="tutor-policy"><div><strong>Cancellation policy</strong><span>Free cancellation up to 12 hours before a lesson</span></div><Button variant="secondary">Edit policy</Button></div><Button className="tutor-settings-save" size="large">Save settings</Button></section>);
+  const [saved,setSaved]=useState(false);
+  const [editingPolicy,setEditingPolicy]=useState(false);
+  return tutorShell('settings','Settings','tutor-settings',<section className="student-card tutor-settings-card"><h2>Tutor preferences</h2><TutorToggle label="Auto-accept repeat students" description="Automatically approve requests from existing students"/><TutorToggle defaultOn label="Booking reminders" description="Email and push alerts before lessons"/><TutorToggle defaultOn label="New request alerts" description="Notify immediately for booking requests"/><TutorToggle defaultOn label="Profile visibility" description="Allow students to find your profile"/><div className="tutor-policy"><div><strong>Cancellation policy</strong><span>{editingPolicy?'Choose a new policy in the next release.':'Free cancellation up to 12 hours before a lesson'}</span></div><Button onClick={()=>setEditingPolicy(value=>!value)} variant="secondary">{editingPolicy?'Done':'Edit policy'}</Button></div>{saved?<p className="tutor-settings-message" aria-live="polite">Settings saved</p>:null}<Button className="tutor-settings-save" onClick={()=>setSaved(true)} size="large">Save settings</Button></section>);
 }
 
 export const tutorRoutes=[

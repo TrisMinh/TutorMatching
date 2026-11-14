@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useState, type KeyboardEvent, type ReactNode } from 'react';
 import { gatewayClient } from '../api';
 import { BrandMark } from '../design-system/BrandMark';
 import { MotionLink, MotionNavLink, useMotionNavigate } from './MotionLink';
@@ -53,6 +53,8 @@ function AssetIcon({ asset }: { asset: string }) {
 export function AppShell({ active, children, contentClassName = '', mode = 'student', mobileTitle, title }: AppShellProps) {
   const navigate = useMotionNavigate();
   const [loggingOut, setLoggingOut] = useState(false);
+  const [quickPanel, setQuickPanel] = useState<'messages' | null>(null);
+  const [search, setSearch] = useState('');
   const isTutor = mode === 'tutor';
   const desktopNavigation = isTutor ? tutorNavItems : navItems;
   const mobileNavigation = isTutor ? tutorMobileItems : mobileItems;
@@ -66,6 +68,11 @@ export function AppShell({ active, children, contentClassName = '', mode = 'stud
     } finally {
       navigate('/auth/sign-in', { replace: true, viewTransition: true });
     }
+  }
+
+  function submitSearch(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key !== 'Enter' || !search.trim()) return;
+    navigate(isTutor ? '/tutor/requests' : `/student/find-tutors?q=${encodeURIComponent(search.trim())}`, { viewTransition: true });
   }
 
   return (
@@ -95,14 +102,15 @@ export function AppShell({ active, children, contentClassName = '', mode = 'stud
           <label className="student-global-search">
             <span className="sr-only">Search anything</span>
             <AssetIcon asset="nav-search.svg" />
-            <input placeholder="Search anything..." />
+            <input onChange={(event) => setSearch(event.target.value)} onKeyDown={submitSearch} placeholder="Search anything..." value={search} />
           </label>
           <div className="student-topbar__actions">
             {isTutor ? <span className="tutor-mode">Tutor mode</span> : null}
-            <button aria-label="Messages" type="button"><AssetIcon asset="20" /></button>
-            <button aria-label="Notifications" type="button"><AssetIcon asset="nav-bell.svg" /><span /></button>
+            <button aria-expanded={quickPanel === 'messages'} aria-label="Messages" onClick={() => setQuickPanel((current) => current === 'messages' ? null : 'messages')} type="button"><AssetIcon asset="20" /></button>
+            <button aria-label="Notifications" onClick={() => navigate(isTutor ? '/tutor/notifications' : '/student/notifications', { viewTransition: true })} type="button"><AssetIcon asset="nav-bell.svg" /><span /></button>
             <strong>{accountName}</strong>
             <img className="student-topbar__avatar" alt={accountName} src={accountImage} />
+            {quickPanel === 'messages' ? <div className="student-quick-panel" role="dialog" aria-label="Recent messages"><strong>Recent messages</strong><p>No unread messages right now.</p><MotionLink to={isTutor ? '/tutor/requests' : '/student/bookings'}>View conversations</MotionLink></div> : null}
           </div>
         </header>
         <main className={`student-content ${contentClassName}`.trim()}>{children}</main>
