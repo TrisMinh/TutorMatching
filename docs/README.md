@@ -44,7 +44,7 @@ Từ **PHẢI**, **KHÔNG ĐƯỢC**, **NÊN** và **CÓ THỂ** mang nghĩa quy
 ## Sơ đồ nên mở cùng tài liệu
 
 - Tổng thể: [system context](diagrams/system-context.puml), [container architecture](diagrams/container-architecture.puml), [Compose deployment](diagrams/deployment-compose.puml), [DDD context map](diagrams/ddd-context-map.puml).
-- Domain/data: [Identity](diagrams/identity-domain.puml), [Tutor](diagrams/tutor-domain.puml), [Student](diagrams/student-domain.puml), [Scheduling](diagrams/scheduling-domain.puml), [Notification](diagrams/notification-domain.puml), [database ERD](diagrams/database-erd.puml).
+- Domain/data: [Identity](diagrams/identity-domain.puml), [Tutor](diagrams/tutor-domain.puml), [Student](diagrams/student-domain.puml), [Scheduling](diagrams/scheduling-domain.puml), [Notification](diagrams/notification-domain.puml), [database ownership ERD](diagrams/database-erd.puml) và các physical schema chi tiết trong [PlantUML index](diagrams/README.md).
 - Luồng: [login](diagrams/login-sequence.puml), [search](diagrams/search-sequence.puml), [booking](diagrams/booking-sequence.puml), [cancel](diagrams/cancel-sequence.puml), [notification](diagrams/notification-sequence.puml), [booking state](diagrams/booking-state.puml).
 - Hạ tầng: [RabbitMQ](diagrams/rabbitmq-topology.puml), [Redis hold](diagrams/redis-hold-flow.puml), [request tracing](diagrams/request-tracing.puml).
 

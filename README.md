@@ -10,7 +10,8 @@ Bắt đầu tại [Bộ tài liệu kỹ thuật](docs/README.md). Bộ tài li
 - đặc tả Identity, Tutor, Student, Scheduling và Notification;
 - PostgreSQL, Redis, RabbitMQ, YARP, JWT, Docker Compose, cổng và biến môi trường;
 - security, observability, runbook, backup/recovery, test và Postman;
-- [19 sơ đồ PlantUML](docs/diagrams/README.md) cho kiến trúc, domain, ERD, sequence, state và hạ tầng.
+- [24 sơ đồ PlantUML](docs/diagrams/README.md) cho kiến trúc, domain, physical
+  database schema, sequence, state và hạ tầng.
 
 Nguồn thiết kế ban đầu được lưu tại `docs/TutorMatching_BaoCaoThietKe_HoanThien.docx`. Tài liệu Markdown là baseline triển khai đã chốt; nếu khác nhau, ưu tiên các quyết định trong `docs/01-architecture/architecture-decisions.md`.
 

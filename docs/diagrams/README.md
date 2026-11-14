@@ -8,7 +8,7 @@ Thư mục này là nguồn chuẩn cho sơ đồ kiến trúc. Tên component, 
 |---|---|
 | Kiến trúc | `system-context`, `container-architecture`, `deployment-compose`, `ddd-context-map` |
 | Domain | `identity-domain`, `tutor-domain`, `student-domain`, `scheduling-domain`, `notification-domain` |
-| Dữ liệu | `database-erd` |
+| Dữ liệu | `database-erd` ownership overview; 5 file `*-database-schema` physical detail |
 | Sequence | `login-sequence`, `search-sequence`, `booking-sequence`, `cancel-sequence`, `notification-sequence` |
 | State/infra | `booking-state`, `rabbitmq-topology`, `redis-hold-flow`, `request-tracing` |
 
@@ -31,4 +31,12 @@ docker run --rm -v "$PWD:/workspace" -w /workspace plantuml/plantuml:1.2025.4 \
 ```
 
 Output `rendered/` là artifact, không phải nguồn chỉnh sửa. CI phải fail khi syntax lỗi. Khi sửa tên route/event/port/schema, tìm toàn repo và cập nhật cả Markdown lẫn `.puml`.
+
+Physical schema chi tiết:
+
+- `identity-database-schema.puml`
+- `tutor-database-schema.puml`
+- `student-database-schema.puml`
+- `scheduling-database-schema.puml`
+- `notification-database-schema.puml`
 
