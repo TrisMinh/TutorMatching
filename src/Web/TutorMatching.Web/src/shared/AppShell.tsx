@@ -119,7 +119,7 @@ function AppShellFrame({ active, children, contentClassName = '', mode = 'studen
             </MotionNavLink>
           ))}
         </nav>
-        <button className="student-logout" disabled={loggingOut} onClick={logout} type="button"><AssetIcon asset="nav-logout.svg" /><span>{loggingOut ? 'Logging out…' : 'Log out'}</span></button>
+        <button className="student-logout" disabled={loggingOut} onClick={logout} type="button"><svg className="student-logout__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 5H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4"/><path d="M9 12h12m-4-4 4 4-4 4"/></svg><span>{loggingOut ? 'Logging out…' : 'Log out'}</span></button>
       </aside>
       <section className="student-workspace">
         <header className="student-topbar">
