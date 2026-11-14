@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { gatewayClient, type Booking, type NotificationItem, type StudentProfile, type Subject, type TutorProfile } from '../../api';
 import { useGatewayResource } from '../../api/useGatewayResource';
 import { Button } from '../../design-system/Button';
 import { TextField } from '../../design-system/TextField';
 import { AppShell } from '../../shared/AppShell';
+import { MotionLink as Link, useMotionNavigate } from '../../shared/MotionLink';
 import { studentBookings, studentNotifications, studentTutors } from '../../shared/fixtures';
 import './student.css';
 
@@ -57,7 +58,7 @@ export function StudentDashboard() {
           ))}
         </div>
         <div className="dashboard-week">
-          <div className="dashboard-week__header"><h2>This week</h2><Link to="/student/bookings">View bookings</Link></div>
+          <div className="dashboard-week__header"><h2>This week</h2><Link to="/student/bookings" viewTransition>View bookings</Link></div>
           <div className="dashboard-week__days">
             {weekdays.map((day, dayIndex) => (
               <div className="dashboard-week__day" key={day}>
@@ -91,7 +92,7 @@ export function StudentDashboard() {
 }
 
 export function CompleteProfileScreen() {
-  const navigate = useNavigate();
+  const navigate = useMotionNavigate();
   const [displayName, setDisplayName] = useState(() => window.sessionStorage.getItem('tutormatching.registration.name') || 'Minh Nguyen');
   const [learningGoal, setLearningGoal] = useState('Improve exam results');
   const [saving, setSaving] = useState(false);
@@ -111,7 +112,7 @@ export function CompleteProfileScreen() {
       if (subjects.length) {
         await gatewayClient.saveStudentInterests(subjects.slice(0, 2).map((subject, index) => ({ subjectId: subject.id, priority: index + 1 })));
       }
-      navigate('/student/find-tutors');
+      navigate('/student/find-tutors', { viewTransition: true });
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Unable to save your learning profile.');
     } finally {
@@ -195,7 +196,7 @@ export function FindTutorsScreen() {
             <p className="tutor-card__rating">★ {tutor.rating} <span>•</span> <span className="desktop-name">{tutor.reviews}</span><span className="mobile-name">{tutor.mobilePrice} / hour</span></p>
             <p className="tutor-card__price">{tutor.price} <span>/ hour</span></p>
             <p className="tutor-card__bio">{tutor.bio || 'Patient, structured lessons tailored to each student.'}</p>
-            <Link className="student-primary-link" to={`/student/tutors/${tutor.id}`}>View profile</Link>
+            <Link className="student-primary-link" to={`/student/tutors/${tutor.id}`} viewTransition>View profile</Link>
           </article>
         ))}
       </div>
@@ -225,13 +226,13 @@ export function TutorProfileScreen() {
       <section className="student-card tutor-profile__hero">
         <div className="profile-avatar"><img alt={displayName} src={avatar}/><span /></div>
         <div><h2>{displayName}</h2><p>Mathematics • Physics • Grade 8–12</p><p className="profile-rating">★ 4.9　•　126 reviews　•　482 lessons</p><strong>150,000₫ <span>/ hour</span></strong></div>
-        <Link className="student-primary-link" to={bookingTarget}>Book a lesson</Link>
+        <Link className="student-primary-link" to={bookingTarget} viewTransition>Book a lesson</Link>
       </section>
       <div className="tutor-profile__details">
         <section className="student-card tutor-about"><h2>About Minh Anh</h2><p>{tutor?.bio || 'I help students build strong foundations and confidence through clear, practical explanations.'}</p><h3>Experience</h3><p>{tutor ? `${tutor.experienceYears}+ years tutoring` : '5+ years tutoring • Hanoi National University of Education'}</p><h3>Teaching style</h3><div className="tag-row"><span>Patient</span><span>Structured</span><span>Exam focused</span></div></section>
         <section className="student-card tutor-availability"><h2>Next availability</h2>{['Today • 18:00','Tue • 09:00','Tue • 15:30','Wed • 19:00'].map((time,index)=><button aria-pressed={index===0} className={index===0?'is-active':''} key={time} type="button">{time}</button>)}</section>
       </div>
-      <Link className="student-primary-link tutor-profile__mobile-book" to={bookingTarget}>Book a lesson</Link>
+      <Link className="student-primary-link tutor-profile__mobile-book" to={bookingTarget} viewTransition>Book a lesson</Link>
     </AppShell>
   );
 }
@@ -241,7 +242,7 @@ export function SelectScheduleScreen() {
   const [bookingError, setBookingError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
+  const navigate = useMotionNavigate();
   const days = Array.from({ length: 30 }, (_, index) => index + 1);
 
   async function continueBooking() {
@@ -249,7 +250,7 @@ export function SelectScheduleScreen() {
     const subjectId = searchParams.get('subjectId');
     const startAtUtc = searchParams.get('startAtUtc');
     if (!tutorId || !subjectId || !startAtUtc) {
-      navigate('/student/book/review');
+      navigate('/student/book/review', { viewTransition: true });
       return;
     }
     setSubmitting(true);
@@ -257,7 +258,7 @@ export function SelectScheduleScreen() {
     try {
       const hold = await gatewayClient.createBookingHold({ tutorId, subjectId, startAtUtc });
       window.sessionStorage.setItem('tutormatching.booking.hold', JSON.stringify(hold));
-      navigate('/student/book/review');
+      navigate('/student/book/review', { viewTransition: true });
     } catch (reason) {
       setBookingError(reason instanceof Error ? reason.message : 'Unable to hold this time slot.');
     } finally {
@@ -280,14 +281,14 @@ function DetailRows({ rows }: { rows: Array<[string, string]> }) {
 }
 
 export function ReviewBookingScreen() {
-  const navigate = useNavigate();
+  const navigate = useMotionNavigate();
   const [confirming, setConfirming] = useState(false);
   const [bookingError, setBookingError] = useState('');
 
   async function confirm() {
     const rawHold = window.sessionStorage.getItem('tutormatching.booking.hold');
     if (!rawHold) {
-      navigate('/student/book/confirmed');
+      navigate('/student/book/confirmed', { viewTransition: true });
       return;
     }
     setConfirming(true);
@@ -297,7 +298,7 @@ export function ReviewBookingScreen() {
       const booking = await gatewayClient.confirmBooking(hold);
       window.sessionStorage.removeItem('tutormatching.booking.hold');
       window.sessionStorage.setItem('tutormatching.booking.confirmed', JSON.stringify(booking));
-      navigate('/student/book/confirmed');
+      navigate('/student/book/confirmed', { viewTransition: true });
     } catch (reason) {
       setBookingError(reason instanceof Error ? reason.message : 'Unable to confirm this booking.');
     } finally {
@@ -315,7 +316,7 @@ export function ReviewBookingScreen() {
 export function BookingConfirmedScreen() {
   return (
     <AppShell active="bookings" contentClassName="booking-confirmed" title="Booking confirmed">
-      <section className="student-card confirmation-card"><div className="confirmation-avatar"><img alt="Minh Anh" src="/assets/figma/student-tutor-1.jpg"/><span>✓</span></div><h2>Your lesson is booked!</h2><p>We’ve notified Minh Anh and added the lesson to your schedule.</p><div className="confirmation-summary"><strong>Mathematics • Wednesday, 18 Nov • 10:30–11:30</strong><span>Online • Nguyen Minh Anh • 150,000₫</span></div><div className="confirmation-actions"><Link className="student-primary-link" to="/student/bookings/TM-20261118-1042">View booking</Link><Link className="student-secondary-link" to="/student/dashboard">Back to dashboard</Link></div></section>
+      <section className="student-card confirmation-card"><div className="confirmation-avatar"><img alt="Minh Anh" src="/assets/figma/student-tutor-1.jpg"/><span>✓</span></div><h2>Your lesson is booked!</h2><p>We’ve notified Minh Anh and added the lesson to your schedule.</p><div className="confirmation-summary"><strong>Mathematics • Wednesday, 18 Nov • 10:30–11:30</strong><span>Online • Nguyen Minh Anh • 150,000₫</span></div><div className="confirmation-actions"><Link className="student-primary-link" to="/student/bookings/TM-20261118-1042" viewTransition>View booking</Link><Link className="student-secondary-link" to="/student/dashboard" viewTransition>Back to dashboard</Link></div></section>
     </AppShell>
   );
 }
@@ -327,7 +328,7 @@ export function BookingsScreen() {
   return (
     <AppShell active="bookings" contentClassName="bookings" title="My bookings">
       <div className="booking-tabs"><button className="is-active">Upcoming</button><button>Completed</button><button>Cancelled</button></div>
-      <div className="booking-list">{bookings.map((booking,index)=><article className="student-card booking-item" key={booking.id ?? `${booking.day}-${booking.title}`}><div className="booking-date"><strong>{booking.day}</strong><span>{booking.month}</span></div><div className="booking-item__content"><h2>{booking.title}</h2><p>{booking.time} • {booking.format}</p></div><span className="booking-status">{booking.status}</span><Link className="student-primary-link" to={booking.id ? `/student/bookings/${booking.id}` : index===0?'#':'/student/bookings/TM-20261118-1042'}>{booking.action}</Link></article>)}</div>
+      <div className="booking-list">{bookings.map((booking,index)=><article className="student-card booking-item" key={booking.id ?? `${booking.day}-${booking.title}`}><div className="booking-date"><strong>{booking.day}</strong><span>{booking.month}</span></div><div className="booking-item__content"><h2>{booking.title}</h2><p>{booking.time} • {booking.format}</p></div><span className="booking-status">{booking.status}</span><Link className="student-primary-link" to={booking.id ? `/student/bookings/${booking.id}` : index===0?'#':'/student/bookings/TM-20261118-1042'} viewTransition>{booking.action}</Link></article>)}</div>
     </AppShell>
   );
 }

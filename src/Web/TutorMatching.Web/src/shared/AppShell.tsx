@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
-import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { gatewayClient } from '../api';
 import { BrandMark } from '../design-system/BrandMark';
+import { MotionLink, MotionNavLink, useMotionNavigate } from './MotionLink';
 
 type AppShellProps = {
   active: string;
@@ -51,7 +51,7 @@ function AssetIcon({ asset }: { asset: string }) {
 }
 
 export function AppShell({ active, children, contentClassName = '', mode = 'student', mobileTitle, title }: AppShellProps) {
-  const navigate = useNavigate();
+  const navigate = useMotionNavigate();
   const [loggingOut, setLoggingOut] = useState(false);
   const isTutor = mode === 'tutor';
   const desktopNavigation = isTutor ? tutorNavItems : navItems;
@@ -64,27 +64,27 @@ export function AppShell({ active, children, contentClassName = '', mode = 'stud
     try {
       await gatewayClient.logout();
     } finally {
-      navigate('/auth/sign-in', { replace: true });
+      navigate('/auth/sign-in', { replace: true, viewTransition: true });
     }
   }
 
   return (
     <div className={`student-shell ${isTutor ? 'student-shell--tutor' : ''}`}>
       <aside className="student-sidebar">
-        <Link className="student-brand" to={isTutor ? '/tutor/dashboard' : '/student/dashboard'}>
+        <MotionLink className="student-brand" to={isTutor ? '/tutor/dashboard' : '/student/dashboard'}>
           <BrandMark />
           <span>Teach.</span>
-        </Link>
+        </MotionLink>
         <div className="student-account">
           <img alt={accountName} src={accountImage} />
           <div><strong>{accountName}</strong><span>{isTutor ? 'Tutor account' : 'Student account'}</span></div>
         </div>
         <nav aria-label="Student navigation">
           {desktopNavigation.map(([id, to, label, icon]) => (
-            <NavLink className={id === active ? 'is-active' : ''} key={id} to={to}>
+            <MotionNavLink className={id === active ? 'is-active' : ''} key={id} to={to}>
               <AssetIcon asset={icon} />
               <span>{label}</span>
-            </NavLink>
+            </MotionNavLink>
           ))}
         </nav>
         <button className="student-logout" disabled={loggingOut} onClick={logout} type="button"><AssetIcon asset="nav-logout.svg" /><span>{loggingOut ? 'Logging out…' : 'Log out'}</span></button>
@@ -109,10 +109,10 @@ export function AppShell({ active, children, contentClassName = '', mode = 'stud
       </section>
       <nav className="student-mobile-nav" aria-label="Mobile student navigation">
         {mobileNavigation.map(([id, to, label, icon]) => (
-          <NavLink className={id === active ? 'is-active' : ''} key={id} to={to}>
+          <MotionNavLink className={id === active ? 'is-active' : ''} key={id} to={to}>
             <AssetIcon asset={icon} />
             <span>{label}</span>
-          </NavLink>
+          </MotionNavLink>
         ))}
       </nav>
     </div>

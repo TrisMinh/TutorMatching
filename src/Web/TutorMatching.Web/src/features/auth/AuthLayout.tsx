@@ -87,7 +87,7 @@ export function AuthLayout({ children, screen, slideNumber, slideTitle }: AuthLa
               <img alt="" src={tutorSlides[previousSlide].image} />
             </div>
             <div className="auth-carousel__photo">
-              <img alt="Tutor helping a student learn" src={tutorSlides[activeSlide].image} />
+              <img alt="Tutor helping a student learn" key={activeSlide} src={tutorSlides[activeSlide].image} />
             </div>
             <div className="auth-carousel__peek auth-carousel__peek--right">
               <img alt="" src={tutorSlides[nextSlide].image} />

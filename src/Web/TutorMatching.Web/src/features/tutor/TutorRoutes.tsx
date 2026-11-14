@@ -1,11 +1,11 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { gatewayClient, type Booking, type NotificationItem, type Subject, type TutorProfile } from '../../api';
 import { useGatewayResource } from '../../api/useGatewayResource';
 import { Button } from '../../design-system/Button';
 import { TextField } from '../../design-system/TextField';
 import { AppShell } from '../../shared/AppShell';
+import { useMotionNavigate } from '../../shared/MotionLink';
 import './tutor.css';
 
 const tutorShell = (active: string, title: string, className: string, content: ReactNode, mobileTitle?: string) => (
@@ -40,7 +40,7 @@ export function TutorDashboard() {
 }
 
 export function TutorOnboarding() {
-  const navigate = useNavigate();
+  const navigate = useMotionNavigate();
   const [headline, setHeadline] = useState('Math tutor helping students master exams');
   const [bio, setBio] = useState('I help students build strong foundations through clear, practical explanations.');
   const [experienceYears, setExperienceYears] = useState('5');
@@ -58,7 +58,7 @@ export function TutorOnboarding() {
         avatarUrl: '/assets/figma/student-tutor-1.jpg',
       });
       window.sessionStorage.setItem(tutorProfileKey, profile.id);
-      navigate('/tutor/subjects-pricing');
+      navigate('/tutor/subjects-pricing', { viewTransition: true });
     } catch (reason) {
       setError(apiMessage(reason, 'Unable to save your tutor profile.'));
     } finally {
@@ -72,7 +72,7 @@ export function TutorOnboarding() {
 }
 
 export function SubjectsPricing() {
-  const navigate = useNavigate();
+  const navigate = useMotionNavigate();
   const loadSubjects = useCallback(() => gatewayClient.listSubjects(), []);
   const { data: apiSubjects } = useGatewayResource<Subject[] | null>(loadSubjects, null);
   const [saving, setSaving] = useState(false);
@@ -88,7 +88,7 @@ export function SubjectsPricing() {
     setError('');
     try {
       await gatewayClient.saveTutorSubjects(apiSubjects.slice(0, 3).map((subject, index) => ({ subjectId: subject.id, proficiencyLevel: Math.min(index + 1, 3) })));
-      navigate('/tutor/availability');
+      navigate('/tutor/availability', { viewTransition: true });
     } catch (reason) {
       setError(apiMessage(reason, 'Unable to save subjects.'));
     } finally {
@@ -150,13 +150,13 @@ export function TutorLessonDetails() {
 }
 
 export function TutorPublicProfile() {
-  const navigate = useNavigate();
+  const navigate = useMotionNavigate();
   const profileId = typeof window === 'undefined' ? null : window.sessionStorage.getItem(tutorProfileKey);
   const loadProfile = useCallback(() => profileId ? gatewayClient.getTutor(profileId) : Promise.reject(new Error('Tutor profile has not been saved yet.')), [profileId]);
   const { data: profile } = useGatewayResource<TutorProfile | null>(loadProfile, null);
   const name = profile?.displayName ?? 'Nguyen Minh Anh';
   const avatar = profile?.avatarUrl ?? '/assets/figma/student-tutor-1.jpg';
-  return tutorShell('profile','Public profile preview','tutor-public-profile',<section className="student-card tutor-public-card"><div className="tutor-public-head"><div className="profile-avatar"><img alt={name} src={avatar}/><span/></div><div><h2>{name}</h2><p>Mathematics &amp; Physics Tutor</p><strong>★ 4.9 • 126 reviews • 482 lessons</strong><span className="tutor-verified">Verified</span></div></div><div className="tutor-public-body"><div><h3>About me</h3><p>{profile?.bio ?? 'I help students understand difficult concepts, build confidence, and develop reliable study habits.'}</p><h3>Subjects</h3><div className="tag-row"><span>Mathematics</span><span>Physics</span><span>Exam prep</span></div></div><aside><strong>From 150,000₫ / hour</strong><Button fullWidth onClick={() => navigate('/tutor/onboarding')} size="large">Edit profile</Button></aside></div></section>);
+  return tutorShell('profile','Public profile preview','tutor-public-profile',<section className="student-card tutor-public-card"><div className="tutor-public-head"><div className="profile-avatar"><img alt={name} src={avatar}/><span/></div><div><h2>{name}</h2><p>Mathematics &amp; Physics Tutor</p><strong>★ 4.9 • 126 reviews • 482 lessons</strong><span className="tutor-verified">Verified</span></div></div><div className="tutor-public-body"><div><h3>About me</h3><p>{profile?.bio ?? 'I help students understand difficult concepts, build confidence, and develop reliable study habits.'}</p><h3>Subjects</h3><div className="tag-row"><span>Mathematics</span><span>Physics</span><span>Exam prep</span></div></div><aside><strong>From 150,000₫ / hour</strong><Button fullWidth onClick={() => navigate('/tutor/onboarding', { viewTransition: true })} size="large">Edit profile</Button></aside></div></section>);
 }
 
 export function TutorNotifications() {

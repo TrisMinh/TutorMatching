@@ -4,6 +4,10 @@ High-fidelity React implementation of the approved TutorMatching Figma file
 `MPcAyOhuvLXtl3yeUVNHpd`. The implementation uses local Figma exports, Gilroy,
 React Router, authored responsive CSS, and deterministic fixture content.
 
+The UI motion system is defined in `src/design-system/motion.css`. It uses shared
+duration/easing tokens, native View Transitions where supported, transform/opacity
+micro-interactions, and a complete `prefers-reduced-motion` fallback.
+
 ## Run locally
 
 ```powershell
@@ -25,6 +29,8 @@ npm run build
 - Browser visual contracts cover the Figma desktop (1440×900), tablet (1024×768),
   mobile (390×844), and shared-state (480×360) canvases.
 - Browser tests use the installed stable Chrome channel and start a dedicated Vite server on port 4173.
+- Motion contracts cover page entry, carousel changes, native route transitions,
+  and reduced-motion behavior.
 
 ## Route groups
 

@@ -92,3 +92,59 @@ test('small-phone, tablet, and landscape breakpoints remain stable', async ({ pa
     await expectHealthyVisualSurface(page);
   }
 });
+
+test('motion system animates route content and carousel changes', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/auth/sign-in');
+
+  const pageMotion = await page.locator('.auth-entry__content').evaluate((element) => {
+    const style = getComputedStyle(element);
+    return { name: style.animationName, duration: style.animationDuration };
+  });
+  expect(pageMotion).toEqual({ name: 'tm-page-enter', duration: '0.32s' });
+
+  const image = page.getByRole('img', { name: 'Tutor helping a student learn' });
+  const previousSource = await image.getAttribute('src');
+  await page.getByRole('button', { name: 'Next slide' }).click();
+  await expect(image).not.toHaveAttribute('src', previousSource ?? '');
+  await expect(image).toHaveCSS('animation-name', 'tm-image-enter');
+});
+
+test('reduced motion presents the final state without animation', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/tutor/dashboard');
+
+  await expect(page.locator('.student-content')).toHaveCSS('animation-name', 'none');
+  await expect(page.locator('.tutor-stats article').first()).toHaveCSS('animation-name', 'none');
+  await expect(page.getByRole('heading', { name: 'Welcome back, Minh Anh' })).toBeVisible();
+});
+
+test('sidebar navigation uses a native view transition when supported', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/student/dashboard');
+  const supportsViewTransitions = await page.evaluate(() => {
+    const documentWithTransitions = document as Document & {
+      startViewTransition?: (update: () => void | Promise<void>) => unknown;
+    };
+    const nativeTransition = documentWithTransitions.startViewTransition?.bind(document);
+    if (!nativeTransition) return false;
+    (window as Window & { __tmViewTransitions?: number }).__tmViewTransitions = 0;
+    Object.defineProperty(documentWithTransitions, 'startViewTransition', {
+      configurable: true,
+      value: (update: () => void | Promise<void>) => {
+        const instrumentedWindow = window as Window & { __tmViewTransitions?: number };
+        instrumentedWindow.__tmViewTransitions = (instrumentedWindow.__tmViewTransitions ?? 0) + 1;
+        return nativeTransition(update);
+      },
+    });
+    return true;
+  });
+
+  await page.getByRole('link', { name: 'My bookings' }).click();
+
+  await expect(page).toHaveURL(/\/student\/bookings$/);
+  await expect(page.getByRole('heading', { name: 'My bookings' })).toBeVisible();
+  if (supportsViewTransitions) {
+    expect(await page.evaluate(() => (window as Window & { __tmViewTransitions?: number }).__tmViewTransitions ?? 0)).toBeGreaterThan(0);
+  }
+});

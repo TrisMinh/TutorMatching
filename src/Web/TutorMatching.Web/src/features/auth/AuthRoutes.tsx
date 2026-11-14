@@ -1,8 +1,8 @@
 import { useRef, useState, type ChangeEvent, type FormEvent, type KeyboardEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
 import { GatewayError, gatewayClient } from '../../api';
 import { Button } from '../../design-system/Button';
 import { TextField } from '../../design-system/TextField';
+import { MotionLink as Link, useMotionNavigate } from '../../shared/MotionLink';
 import { AuthLayout } from './AuthLayout';
 import './auth.css';
 
@@ -52,7 +52,7 @@ function RoleSwitch({ onChange, value }: { onChange?: (role: 'student' | 'tutor'
 }
 
 export function SignInScreen({ error = false }: { error?: boolean }) {
-  const navigate = useNavigate();
+  const navigate = useMotionNavigate();
   const [email, setEmail] = useState(error ? 'minh@example.com' : '');
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(false);
@@ -67,7 +67,7 @@ export function SignInScreen({ error = false }: { error?: boolean }) {
     try {
       const { user } = await gatewayClient.login({ email, password }, remember);
       const destination = user.role === 'Tutor' ? '/tutor/dashboard' : '/student/dashboard';
-      navigate(destination, { replace: true });
+      navigate(destination, { replace: true, viewTransition: true });
     } catch (reason) {
       setSubmitError(reason instanceof GatewayError ? reason.message : 'Unable to reach TutorMatching. Try again.');
     } finally {
@@ -112,21 +112,21 @@ export function SignInScreen({ error = false }: { error?: boolean }) {
             <input checked={remember} onChange={(event) => setRemember(event.target.checked)} type="checkbox" />
             <span>Remember me</span>
           </label>
-          <Link to="/auth/forgot-password">Forgot password?</Link>
+          <Link to="/auth/forgot-password" viewTransition>Forgot password?</Link>
         </div>
         <Button disabled={submitting} fullWidth size="large" type="submit">
           {submitting ? 'Signing in…' : 'Sign in'}
         </Button>
       </form>
       <p className="auth-switch-link">
-        New here? <Link to="/auth/sign-up">Create account</Link>
+        New here? <Link to="/auth/sign-up" viewTransition>Create account</Link>
       </p>
     </AuthLayout>
   );
 }
 
 export function SignUpScreen() {
-  const navigate = useNavigate();
+  const navigate = useMotionNavigate();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -147,7 +147,7 @@ export function SignUpScreen() {
     try {
       await gatewayClient.register({ email, password, role });
       window.sessionStorage.setItem('tutormatching.registration.name', fullName);
-      navigate('/auth/sign-in', { replace: true });
+      navigate('/auth/sign-in', { replace: true, viewTransition: true });
     } catch (reason) {
       setSubmitError(reason instanceof GatewayError ? reason.message : 'Unable to create your account. Try again.');
     } finally {
@@ -175,7 +175,7 @@ export function SignUpScreen() {
       <p className="auth-legal-copy">
         By continuing, you agree to our <a href="/terms">Terms</a> and <a href="/privacy">Privacy Policy</a>.
       </p>
-      <p className="auth-switch-link">Already have an account? <Link to="/auth/sign-in">Sign in</Link></p>
+      <p className="auth-switch-link">Already have an account? <Link to="/auth/sign-in" viewTransition>Sign in</Link></p>
     </AuthLayout>
   );
 }
@@ -191,8 +191,8 @@ export function ForgotPasswordScreen() {
         <TextField autoComplete="email" label="Email address" placeholder="you@example.com" type="email" />
         <Button fullWidth size="large" type="submit">Send reset link</Button>
       </form>
-      <p className="auth-switch-link">Remembered it? <Link to="/auth/sign-in">Back to sign in</Link></p>
-      <Link className="auth-back-link" to="/auth/sign-in">← <span>Back to sign in</span></Link>
+      <p className="auth-switch-link">Remembered it? <Link to="/auth/sign-in" viewTransition>Back to sign in</Link></p>
+      <Link className="auth-back-link" to="/auth/sign-in" viewTransition>← <span>Back to sign in</span></Link>
     </AuthLayout>
   );
 }
@@ -207,7 +207,7 @@ export function CheckEmailScreen() {
       <div className="auth-form auth-form--actions">
         <Button fullWidth size="large">Open email app</Button>
         <p>Didn’t receive it? <button type="button">Resend in 00:48</button></p>
-        <Link className="auth-secondary-action" to="/auth/forgot-password">Use another email</Link>
+        <Link className="auth-secondary-action" to="/auth/forgot-password" viewTransition>Use another email</Link>
       </div>
     </AuthLayout>
   );
@@ -268,7 +268,7 @@ export function VerifyEmailScreen() {
         </div>
         <Button fullWidth size="large" type="submit">Verify email</Button>
         <p className="auth-hint auth-hint--center">Resend code in 00:48</p>
-        <Link className="auth-secondary-action" to="/auth/forgot-password">Change email</Link>
+        <Link className="auth-secondary-action" to="/auth/forgot-password" viewTransition>Change email</Link>
       </form>
     </AuthLayout>
   );
@@ -278,11 +278,11 @@ type AccountRole = 'Student' | 'Tutor';
 
 export function ChooseRoleScreen() {
   const [role, setRole] = useState<AccountRole>('Student');
-  const navigate = useNavigate();
+  const navigate = useMotionNavigate();
 
   function continueWith(selectedRole: AccountRole) {
     window.sessionStorage.setItem('tutormatching.registration.role', selectedRole);
-    navigate('/auth/sign-up');
+    navigate('/auth/sign-up', { viewTransition: true });
   }
 
   return (
