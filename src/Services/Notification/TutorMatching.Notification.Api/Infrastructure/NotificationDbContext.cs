@@ -5,6 +5,8 @@ namespace TutorMatching.Notification.Api.Infrastructure;
 
 public sealed class NotificationDbContext(DbContextOptions<NotificationDbContext> options) : DbContext(options)
 {
+    public DbSet<Conversation> Conversations => Set<Conversation>();
+    public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
     public DbSet<ProcessedEvent> ProcessedEvents => Set<ProcessedEvent>();
     public DbSet<NotificationItem> Notifications => Set<NotificationItem>();
     public DbSet<ReminderSchedule> ReminderSchedules => Set<ReminderSchedule>();
@@ -12,6 +14,23 @@ public sealed class NotificationDbContext(DbContextOptions<NotificationDbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        var conversations = modelBuilder.Entity<Conversation>();
+        conversations.ToTable("conversations");
+        conversations.HasKey(c => c.Id);
+        conversations.Property(c => c.Id).ValueGeneratedNever();
+        conversations.Property(c => c.StudentName).HasMaxLength(100);
+        conversations.Property(c => c.TutorName).HasMaxLength(100);
+        conversations.HasIndex(c => new {c.StudentUserId,c.TutorUserId}).IsUnique();
+        conversations.HasIndex(c => new {c.StudentUserId,c.UpdatedAtUtc});
+        conversations.HasIndex(c => new {c.TutorUserId,c.UpdatedAtUtc});
+        var messages = modelBuilder.Entity<ChatMessage>();
+        messages.ToTable("chat_messages");
+        messages.HasKey(m => m.Id);
+        messages.Property(m => m.Id).UseIdentityAlwaysColumn();
+        messages.Property(m => m.Body).HasMaxLength(2000);
+        messages.HasIndex(m => new {m.ConversationId,m.Id});
+        messages.HasIndex(m => new {m.ConversationId,m.SenderUserId,m.ClientMessageId}).IsUnique();
+        messages.HasOne<Conversation>().WithMany().HasForeignKey(m => m.ConversationId).OnDelete(DeleteBehavior.Cascade);
         var events = modelBuilder.Entity<ProcessedEvent>();
         events.ToTable("processed_events");
         events.HasKey(item => item.EventId);

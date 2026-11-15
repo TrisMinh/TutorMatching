@@ -41,10 +41,10 @@ test('real booking confirmation has clear details, illustration and separate res
    const box=await item.boundingBox(),text=await item.locator('dd').boundingBox();
    expect(text!.x-box!.x).toBeGreaterThanOrEqual(16);expect(text!.x+text!.width).toBeLessThanOrEqual(box!.x+box!.width-10);
   }
-  const actions=page.locator('.lesson-detail-actions'),cancel=actions.getByRole('button'),back=actions.getByRole('link');
+  const actions=page.locator('.lesson-detail-actions'),cancel=actions.getByRole('button'),back=actions.getByRole('link',{name:'My bookings',exact:true});
   const a=await cancel.boundingBox(),b=await back.boundingBox();
   expect(a!.height).toBeGreaterThanOrEqual(44);expect(b!.height).toBeGreaterThanOrEqual(44);
-  const gap=width>600?Math.max(a!.x-b!.x-b!.width,b!.x-a!.x-a!.width):Math.max(a!.y-b!.y-b!.height,b!.y-a!.y-a!.height);
+  const gap=Math.max(a!.x-b!.x-b!.width,b!.x-a!.x-a!.width,a!.y-b!.y-b!.height,b!.y-a!.y-a!.height);
   expect(gap).toBeGreaterThanOrEqual(11);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBeTruthy();
   await page.screenshot({path:'../../../.logs/booking-details-'+width+'.png',fullPage:true});

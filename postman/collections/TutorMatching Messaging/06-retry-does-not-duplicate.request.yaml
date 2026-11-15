@@ -1,0 +1,21 @@
+$kind: http-request
+name: Retry does not duplicate
+order: 6000
+url: '{{baseUrl}}/api/v1/conversations/{{conversationId}}/messages'
+method: POST
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{studentToken}}'
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {"body": "Hello tutor {{runId}}", "clientMessageId": "{{clientMessageId}}"}
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Retry does not duplicate', () => pm.response.to.have.status(200));
+      pm.test('same persisted message', () => pm.expect(pm.response.json().id).to.eql(Number(pm.collectionVariables.get('messageId'))));

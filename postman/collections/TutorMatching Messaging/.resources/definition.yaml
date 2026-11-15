@@ -1,0 +1,16 @@
+$kind: collection
+name: TutorMatching Messaging
+description: Private two-way messaging through the Gateway, using seeded demo accounts only.
+variables:
+  baseUrl: 'http://localhost:8080'
+  password: 'TutorDemo!2026'
+  studentToken: ''
+  tutorToken: ''
+  strangerToken: ''
+  tutorId: ''
+  conversationId: ''
+  clientMessageId: ''
+  replyKey: ''
+  messageId: ''
+  replyId: ''
+  runId: ''

@@ -1,0 +1,11 @@
+$kind: http-request
+name: Anonymous cannot read
+order: 15000
+url: '{{baseUrl}}/api/v1/conversations/unread'
+method: GET
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Anonymous cannot read', () => pm.response.to.have.status(401));

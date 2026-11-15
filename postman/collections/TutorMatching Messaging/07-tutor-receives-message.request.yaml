@@ -1,0 +1,15 @@
+$kind: http-request
+name: Tutor receives message
+order: 7000
+url: '{{baseUrl}}/api/v1/conversations/{{conversationId}}/messages'
+method: GET
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{tutorToken}}'
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Tutor receives message', () => pm.response.to.have.status(200));
+      pm.test('peer message delivered', () => pm.expect(pm.response.json().items.some(m => m.id === Number(pm.collectionVariables.get('messageId')) && !m.isMine)).to.eql(true));

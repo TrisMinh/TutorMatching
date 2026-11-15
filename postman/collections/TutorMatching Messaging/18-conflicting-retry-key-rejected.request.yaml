@@ -1,0 +1,20 @@
+$kind: http-request
+name: Conflicting retry key rejected
+order: 18000
+url: '{{baseUrl}}/api/v1/conversations/{{conversationId}}/messages'
+method: POST
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{studentToken}}'
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {"body": "Changed text", "clientMessageId": "{{clientMessageId}}"}
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Conflicting retry key rejected', () => pm.response.to.have.status(409));

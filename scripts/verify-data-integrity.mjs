@@ -12,9 +12,14 @@ const enrollments=rows('tutor','SELECT "CourseId" as course_id,"StudentUserId" a
 const bookings=rows('scheduling','SELECT id,student_id,student_user_id,tutor_id,tutor_user_id,subject_id,start_at_utc,end_at_utc,status FROM bookings');
 const favorites=rows('student','SELECT "StudentId" as student_id,"TutorId" as tutor_id FROM saved_tutors');
 const notifications=rows('notification','SELECT id,recipient_user_id FROM notifications');
+const conversations=rows('notification','SELECT "Id" as id,"StudentUserId" as student_user_id,"TutorUserId" as tutor_user_id,"TutorId" as tutor_id FROM conversations');
+const messages=rows('notification','SELECT "Id" as id,"ConversationId" as conversation_id,"SenderUserId" as sender_user_id FROM chat_messages');
 const issues=[],map=values=>new Map(values.map(v=>[v.id,v]));
 const identity=map(users),tutorMap=map(tutors),studentMap=map(students),courseMap=map(courses),subjectIds=new Set(subjects.map(s=>s.id));
 const check=(valid,reason)=>{if(!valid)issues.push(reason);};
+const conversationMap=map(conversations);
+for(const c of conversations){check(identity.get(c.student_user_id)?.role==='Student','Conversation student missing: '+c.id);check(tutorMap.get(c.tutor_id)?.user_id===c.tutor_user_id,'Conversation tutor link invalid: '+c.id);}
+for(const m of messages){const c=conversationMap.get(m.conversation_id);check(c&&(c.student_user_id===m.sender_user_id||c.tutor_user_id===m.sender_user_id),'Message participant link invalid: '+m.id);}
 for(const t of tutors)check(identity.get(t.user_id)?.role==='Tutor','Tutor Identity link missing: '+t.id);
 for(const s of students)check(identity.get(s.user_id)?.role==='Student','Student Identity link missing: '+s.id);
 for(const c of courses){check(tutorMap.has(c.tutor_id),'Course owner missing: '+c.id);check(c.capacity>0,'Invalid capacity: '+c.id);check(enrollments.filter(e=>e.course_id===c.id&&!e.withdrawn_at_utc).length<=c.capacity,'Course over capacity: '+c.id);}
@@ -28,5 +33,5 @@ function add(user,id,start,end){const list=schedules.get(user)??[];list.push({id
 for(const b of bookings.filter(b=>b.status==='Confirmed')){add(b.student_user_id,'booking:'+b.id,b.start_at_utc,b.end_at_utc);add(b.tutor_user_id,'booking:'+b.id,b.start_at_utc,b.end_at_utc);}
 for(const s of sessions){const c=courseMap.get(s.course_id);if(!c||c.status==='Cancelled')continue;const t=tutorMap.get(c.tutor_id);if(t)add(t.user_id,'course:'+s.id,s.start_at_utc,s.end_at_utc);for(const e of enrollments.filter(e=>e.course_id===c.id&&!e.withdrawn_at_utc))add(e.student_user_id,'course:'+s.id,s.start_at_utc,s.end_at_utc);}
 for(const [user,list] of schedules){list.sort((a,b)=>a.start-b.start);for(let i=0;i<list.length;i++)for(let j=i+1;j<list.length&&list[j].start<list[i].end;j++)if(list[i].id!==list[j].id)issues.push(`Schedule overlap for ${user}: ${list[i].id} / ${list[j].id}`);}
-const report={checkedAt:new Date().toISOString(),counts:{accounts:users.length,tutors:tutors.length,students:students.length,subjects:subjects.length,courses:courses.length,sessions:sessions.length,enrollments:enrollments.filter(e=>!e.withdrawn_at_utc).length,bookings:bookings.length,notifications:notifications.length,savedTutors:favorites.length},issues};
+const report={checkedAt:new Date().toISOString(),counts:{accounts:users.length,tutors:tutors.length,students:students.length,subjects:subjects.length,courses:courses.length,sessions:sessions.length,enrollments:enrollments.filter(e=>!e.withdrawn_at_utc).length,bookings:bookings.length,notifications:notifications.length,savedTutors:favorites.length,conversations:conversations.length,messages:messages.length},issues};
 mkdirSync('.logs',{recursive:true});writeFileSync('.logs/data-integrity.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));if(issues.length)process.exitCode=1;

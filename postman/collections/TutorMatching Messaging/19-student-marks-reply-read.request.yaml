@@ -1,0 +1,20 @@
+$kind: http-request
+name: Student marks reply read
+order: 19000
+url: '{{baseUrl}}/api/v1/conversations/{{conversationId}}/read'
+method: POST
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{studentToken}}'
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {"messageId": {{replyId}}}
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Student marks reply read', () => pm.response.to.have.status(204));

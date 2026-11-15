@@ -1,0 +1,15 @@
+$kind: http-request
+name: Student receives reply
+order: 11000
+url: '{{baseUrl}}/api/v1/conversations/{{conversationId}}/messages'
+method: GET
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{studentToken}}'
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Student receives reply', () => pm.response.to.have.status(200));
+      pm.test('reply delivered', () => pm.expect(pm.response.json().items.some(m => m.id === Number(pm.collectionVariables.get('replyId')) && !m.isMine)).to.eql(true));

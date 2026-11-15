@@ -1,0 +1,15 @@
+$kind: http-request
+name: Read count clears
+order: 9000
+url: '{{baseUrl}}/api/v1/conversations/{{conversationId}}'
+method: GET
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{tutorToken}}'
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Read count clears', () => pm.response.to.have.status(200));
+      pm.test('no unread messages', () => pm.expect(pm.response.json().unreadCount).to.eql(0));

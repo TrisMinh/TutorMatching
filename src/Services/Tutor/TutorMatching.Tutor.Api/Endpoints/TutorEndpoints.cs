@@ -21,6 +21,12 @@ public static class TutorEndpoints
         publicGroup.MapPut("/me/subjects", ReplaceSubjectsAsync).RequireAuthorization(policy => policy.RequireRole("Tutor"));
         publicGroup.MapPut("/me/availability", ReplaceAvailabilityAsync).RequireAuthorization(policy => policy.RequireRole("Tutor"));
 
+        endpoints.MapGet("/internal/v1/tutors/{id:guid}/contact", async(Guid id,TutorDbContext db,CancellationToken ct) => {
+            var tutor=await db.TutorProfiles.AsNoTracking().Where(t=>t.Id==id&&t.Status==TutorStatus.Active)
+                .Select(t=>new {t.Id,t.UserId,t.DisplayName}).SingleOrDefaultAsync(ct);
+            return tutor is null?Results.NotFound():Results.Ok(tutor);
+        }).RequireAuthorization(p=>p.RequireRole("Service").RequireClaim("scope","identity.directory"));
+
         endpoints.MapGet("/api/v1/subjects", async (TutorDbContext dbContext, CancellationToken cancellationToken) =>
             Results.Ok(await dbContext.Subjects.AsNoTracking()
                 .Where(subject => subject.IsActive)

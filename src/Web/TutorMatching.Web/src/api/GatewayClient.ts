@@ -49,6 +49,11 @@ export type AuthUser = {
   role: AccountRole;
 };
 
+export type Conversation = {id:string;peerName:string;peerRole:'Student'|'Tutor';tutorId:string;updatedAtUtc:string;lastMessage:string|null;unreadCount:number};
+export type ConversationPage = {items:Conversation[];page:number;pageSize:number;total:number};
+export type ChatMessage = {id:number;conversationId:string;clientMessageId:string;body:string;createdAtUtc:string;isMine:boolean};
+export type MessagePage = {items:ChatMessage[];hasMore:boolean;nextBefore:number|null};
+
 export type Subject = { id: string; code: string; name: string };
 export type Course = {status?:'Open'|'Closed'|'Cancelled';version?:number;cancellationReason?:string|null;cancelledAtUtc?:string|null;id:string;title:string;tutorId:string;instructor:string;image:string;category:string;description:string;capacity:number;enrolled:number;sessions:Array<{id:string;startAtUtc:string;endAtUtc:string}>};
 export type TutorSubject = { subjectId: string; proficiencyLevel: string | number };
@@ -208,6 +213,17 @@ export class GatewayClient {
   listSubjects() {
     return this.request<Subject[]>('/api/v1/subjects', {}, false);
   }
+
+  listConversations(page=1) {return this.request<ConversationPage>(`/api/v1/conversations?page=${page}&pageSize=50`);}
+  getConversation(id:string) {return this.request<Conversation>(`/api/v1/conversations/${encodeURIComponent(id)}`);}
+  startConversation(tutorId:string) {return this.request<Conversation>('/api/v1/conversations',{method:'POST',body:JSON.stringify({tutorId})});}
+  getMessages(id:string,options:{before?:number;after?:number}={}) {
+    const query=new URLSearchParams();if(options.before!==undefined)query.set('before',String(options.before));if(options.after!==undefined)query.set('after',String(options.after));
+    return this.request<MessagePage>(`/api/v1/conversations/${encodeURIComponent(id)}/messages?${query}`);
+  }
+  sendMessage(id:string,body:string,clientMessageId:string) {return this.request<ChatMessage>(`/api/v1/conversations/${encodeURIComponent(id)}/messages`,{method:'POST',body:JSON.stringify({body,clientMessageId})});}
+  markMessagesRead(id:string,messageId:number) {return this.request<void>(`/api/v1/conversations/${encodeURIComponent(id)}/read`,{method:'POST',body:JSON.stringify({messageId})});}
+  unreadMessages() {return this.request<{count:number}>('/api/v1/conversations/unread');}
 
   listCourses() { return this.request<Course[]>('/api/v1/courses', {}, false); }
   listMyCourses() { return this.request<Course[]>('/api/v1/courses/mine'); }

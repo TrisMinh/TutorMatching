@@ -35,6 +35,18 @@ Báo cáo `.logs/data-integrity.json` kiểm tra tài khoản/hồ sơ, owner kh
 
 Các kiểm thử trình duyệt nằm trong `tests/live/registration-verification.spec.ts` và `tests/live/persisted-platform.spec.ts` (thư mục frontend). Chạy với Identity dùng Mailpit cho email kiểm thử; khôi phục `.env`/provider sau khi thử. Postman Smoke cũng có bước nhận và xác minh mã trước login.
 
+## Nhắn tin Student–Tutor
+
+Student mở hồ sơ gia sư → **Message tutor** hoặc vào biểu tượng Messages trên thanh đầu trang. Tutor trả lời trong **Messages**. Lịch sử lưu ở `notification_db`, chỉ hai người tham gia được đọc/gửi; có số tin chưa đọc, đánh dấu đã đọc, phân trang lịch sử và chống gửi trùng khi thử lại. Tab đang mở cập nhật sau mỗi 3 giây, không cần WebSocket hay service thứ sáu.
+
+```powershell
+node scripts/verify-messaging.mjs
+postman collection run "postman/collections/TutorMatching Messaging"
+npm --prefix src/Web/TutorMatching.Web run test:e2e:live -- messaging.spec.ts --workers=1
+```
+
+Xem [hợp đồng và phạm vi nhắn tin](messaging-contract.md). Các bài API dùng tài khoản demo, tạo tin nhắn kiểm thử được lưu thật, không gửi tới tài khoản cá nhân. Script kiểm tra phân trang có tạo hơn 50 tin và chịu giới hạn 60 thao tác gửi/phút/tài khoản.
+
 ## Phạm vi còn thiếu
 
-Dữ liệu và các luồng được kiểm chứng ở đây là nền tảng đặt lịch/khóa học. Dự án chưa có backend thanh toán, đánh giá hoặc phòng gọi video/chat riêng. Những phần chưa có dữ liệu không hiển thị giá, review hay lịch mẫu để giả vờ hoạt động. Việc triển khai công khai vẫn cần tên miền/HTTPS, thông tin gửi thư, sao lưu, giám sát và kiểm thử theo tải thực tế.
+Dữ liệu và các luồng được kiểm chứng ở đây là nền tảng đặt lịch/khóa học. Đã có chat văn bản Student–Tutor lưu thật trong Notification service (không thêm service thứ sáu). Dự án chưa có backend thanh toán, đánh giá hoặc phòng gọi video. Những phần chưa có dữ liệu không hiển thị giá, review hay lịch mẫu để giả vờ hoạt động. Việc triển khai công khai vẫn cần tên miền/HTTPS, thông tin gửi thư, sao lưu, giám sát và kiểm thử theo tải thực tế.

@@ -1,0 +1,20 @@
+$kind: http-request
+name: NUL text rejected
+order: 20000
+url: '{{baseUrl}}/api/v1/conversations/{{conversationId}}/messages'
+method: POST
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{studentToken}}'
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {"body":"invalid\u0000text","clientMessageId":"{{replyKey}}"}
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('NUL text returns validation error', () => pm.response.to.have.status(400));

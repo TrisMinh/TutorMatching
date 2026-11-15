@@ -1,0 +1,15 @@
+$kind: http-request
+name: Resolve own tutor profile
+order: 3000
+url: '{{baseUrl}}/api/v1/tutors/me'
+method: GET
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{tutorToken}}'
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Resolve own tutor profile', () => pm.response.to.have.status(200));
+      pm.collectionVariables.set('tutorId', pm.response.json().id);

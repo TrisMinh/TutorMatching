@@ -1,3 +1,4 @@
+import {MessageShortcut} from './MessageShortcut';
 import {CourseTicker} from './CourseTicker';
 import { createContext, useContext, useEffect, useLayoutEffect, useState, type ReactNode, type Dispatch, type SetStateAction } from 'react';
 import { Outlet } from 'react-router-dom';
@@ -39,6 +40,7 @@ const navItems = [
   ['dashboard', '/student/dashboard', 'Dashboard', 'nav-dashboard.svg'],
   ['find', '/student/find-tutors', 'Find a tutor', 'nav-search.svg'],
   ['bookings', '/student/bookings', 'My bookings', 'nav-clock.svg'],
+  ['messages', '/student/messages', 'Messages', 'student-icon-20.svg'],
   ['notifications', '/student/notifications', 'Notifications', 'nav-bell.svg'],
   ['profile', '/student/profile', 'My profile', 'nav-profile.svg'],
   ['settings', '/student/settings', 'Settings', 'nav-settings.svg'],
@@ -58,6 +60,7 @@ const tutorNavItems = [
   ['bookings', '/tutor/requests', 'Bookings', 'nav-teacher.svg'],
   ['availability', '/tutor/availability', 'Availability', 'nav-clock.svg'],
   ['profile', '/tutor/public-profile', 'My profile', 'nav-profile.svg'],
+  ['messages', '/tutor/messages', 'Messages', 'student-icon-20.svg'],
   ['notifications', '/tutor/notifications', 'Notifications', 'nav-bell.svg'],
   ['settings', '/tutor/settings', 'Settings', 'nav-settings.svg'],
 ] as const;
@@ -77,7 +80,6 @@ function AssetIcon({ asset }: { asset: string }) {
 function AppShellFrame({ active, children, contentClassName = '', mode = 'student', mobileTitle, title }: AppShellProps) {
   const navigate = useMotionNavigate();
   const [loggingOut, setLoggingOut] = useState(false);
-  const [quickPanel, setQuickPanel] = useState<'messages' | null>(null);
   const isTutor = mode === 'tutor';
   const desktopNavigation = isTutor ? tutorNavItems : navItems;
   const mobileNavigation = isTutor ? tutorMobileItems : mobileItems;
@@ -128,11 +130,11 @@ function AppShellFrame({ active, children, contentClassName = '', mode = 'studen
           <GlobalSearch mode={mode}/>
           <div className="student-topbar__actions">
             {isTutor ? <span className="tutor-mode">Tutor mode</span> : null}
-            <button aria-expanded={quickPanel === 'messages'} aria-label="Messages" onClick={() => setQuickPanel((current) => current === 'messages' ? null : 'messages')} type="button"><AssetIcon asset="20" /></button>
+            <MessageShortcut mode={mode}/>
             <NotificationDropdown mode={mode}/>
             <strong>{accountName}</strong>
             <MotionLink aria-label="Open my profile" to={isTutor ? '/tutor/public-profile' : '/student/profile'}><img className="student-topbar__avatar" alt={accountName} src={accountImage} /></MotionLink>
-            {quickPanel === 'messages' ? <div className="student-quick-panel" role="dialog" aria-label="Recent messages"><strong>Messaging</strong><p>Direct messaging is not available. View your bookings for lesson details.</p><MotionLink to={isTutor ? '/tutor/requests' : '/student/bookings'}>View bookings</MotionLink></div> : null}
+
           </div>
         </header>
         <CourseTicker mode={mode}/>

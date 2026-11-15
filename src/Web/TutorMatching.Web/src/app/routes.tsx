@@ -1,3 +1,4 @@
+import {MessagesScreen} from '../shared/MessagesScreen';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import type { AccountRole } from '../api';
@@ -27,6 +28,8 @@ export function NotFoundFoundation() {
 
 export const appRoutes: AppRoute[] = [
   ...authRoutes,
+  {path:'/student/messages',element:<MessagesScreen/>,access:'Student'},
+  {path:'/tutor/messages',element:<MessagesScreen mode="tutor"/>,access:'Tutor'},
   ...studentRoutes.map((route) => ({ ...route, access: 'Student' as const })),
   ...tutorRoutes.map((route) => ({ ...route, access: 'Tutor' as const })),
   ...(import.meta.env.DEV ? stateRoutes : []),
