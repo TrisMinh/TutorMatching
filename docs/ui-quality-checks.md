@@ -15,3 +15,14 @@ npm run audit:ui
 ```
 
 Audit dùng các tài khoản demo đã seed. Không sửa tài khoản cá nhân. Kiểm thử lưu hồ sơ sử dụng `student24@demo.tutormatching.test` và khôi phục các trường/interest ban đầu bằng API ở khối finally.
+
+
+## Trạng thái trống thân thiện
+
+Dùng chung `FriendlyEmptyState` với minh họa SVG lịch, chuông, kính lúp và sách. Áp dụng cho booking Student/Tutor, thông báo đầy trang và dropdown, tìm kiếm gia sư, lịch trống Tutor, reservation hết hạn/chưa chọn Tutor, dashboard Student và catalog chưa có khóa học. Minh họa là trang trí (`aria-hidden`); tiêu đề và nút hành động vẫn là HTML có thể đọc/chọn bằng bàn phím.
+
+`friendly-empty-states.spec.ts` kiểm tra 8 tuyến Student/Tutor tại 1920, 768 và 390 px. Các phản hồi rỗng được tạo trong browser test để không xóa dữ liệu thật; kiểm tra màn trống, kích thước nút, tràn ngang, điều hướng và lỗi JavaScript. Khi API booking trả 503, giao diện phải hiện lỗi và nút thử lại, không được hiện “chưa có booking”.
+
+```powershell
+npm run test:e2e:live -- friendly-empty-states.spec.ts --workers=1
+```

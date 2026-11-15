@@ -1,0 +1,16 @@
+.friendly-empty-state { display:flex; flex-direction:column; align-items:center; justify-content:center; min-width:0; padding:32px 24px; border:1px solid var(--color-border); border-radius:16px; background:white; text-align:center; }
+.friendly-empty-art { display:block; flex:none; width:210px; height:140px; max-width:100%; margin:0 0 12px; }
+.friendly-empty-state h3 { margin:0; font:21px/1.4 var(--font-semibold); letter-spacing:-.4px; color:var(--color-ink); }
+.friendly-empty-state > p { max-width:420px; margin:10px 0 0; color:var(--color-muted); font:14px/1.7 var(--font-regular); }
+.friendly-empty-actions { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; align-items:center; margin-top:22px; }
+.friendly-empty-action { display:inline-flex; justify-content:center; align-items:center; gap:20px; min-height:46px; border:1px solid var(--color-primary); border-radius:10px; padding:11px 20px; background:var(--color-primary); color:white; text-decoration:none; cursor:pointer; font:14px/1.5 var(--font-semibold); }
+.friendly-empty-action:hover { filter:brightness(.95); }
+.friendly-empty-action:focus-visible { outline:2px solid var(--color-primary); outline-offset:4px; }
+.friendly-empty-state--compact { padding:20px 16px; border:0; background:transparent; }
+.friendly-empty-state--compact .friendly-empty-art { width:150px; height:100px; margin-bottom:8px; }
+.friendly-empty-state--compact h3 { font-size:16px; }
+.friendly-empty-state--compact > p { font-size:13px; }
+.friendly-empty-state--compact .friendly-empty-actions { margin-top:16px; }
+.notification-dropdown-list .friendly-empty-state > p { padding:0; }
+.booking-list > .friendly-empty-state,.notification-list > .friendly-empty-state { grid-column:1/-1; }
+@media(max-width:600px) { .friendly-empty-state { padding:28px 20px; }.friendly-empty-state h3 { font-size:19px; }.friendly-empty-art { width:180px; height:120px; }.friendly-empty-actions { width:100%; }.friendly-empty-action { width:100%; box-sizing:border-box; }.friendly-empty-state--compact { padding:16px 12px; }.friendly-empty-state--compact h3 { font-size:16px; } }
