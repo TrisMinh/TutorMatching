@@ -1,0 +1,21 @@
+$kind: http-request
+name: Tutor replies
+order: 10000
+url: '{{baseUrl}}/api/v1/conversations/{{conversationId}}/messages'
+method: POST
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{tutorToken}}'
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {"body": "Hello student {{runId}}", "clientMessageId": "{{replyKey}}"}
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Tutor replies', () => pm.response.to.have.status(201));
+      pm.collectionVariables.set('replyId', pm.response.json().id);

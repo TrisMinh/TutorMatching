@@ -1,0 +1,21 @@
+$kind: http-request
+name: Start private conversation
+order: 4000
+url: '{{baseUrl}}/api/v1/conversations'
+method: POST
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{studentToken}}'
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {"tutorId": "{{tutorId}}"}
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Start private conversation', () => pm.response.to.have.status(200));
+      pm.collectionVariables.set('conversationId', pm.response.json().id);

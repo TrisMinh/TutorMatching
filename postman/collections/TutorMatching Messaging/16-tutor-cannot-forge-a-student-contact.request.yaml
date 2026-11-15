@@ -1,0 +1,20 @@
+$kind: http-request
+name: Tutor cannot forge a student contact
+order: 16000
+url: '{{baseUrl}}/api/v1/conversations'
+method: POST
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{tutorToken}}'
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {"tutorId": "{{tutorId}}"}
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Tutor cannot forge a student contact', () => pm.response.to.have.status(403));

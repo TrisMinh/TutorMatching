@@ -1,0 +1,21 @@
+$kind: http-request
+name: Login student
+order: 1000
+url: '{{baseUrl}}/api/v1/auth/login'
+method: POST
+auth:
+  type: noauth
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {"email": "student21@demo.tutormatching.test", "password": "{{password}}"}
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Login student', () => pm.response.to.have.status(200));
+      pm.collectionVariables.set('studentToken', pm.response.json().accessToken);
+      pm.collectionVariables.set('runId', Date.now().toString());
+      pm.collectionVariables.set('clientMessageId', pm.variables.replaceIn('{{$guid}}'));
+      pm.collectionVariables.set('replyKey', pm.variables.replaceIn('{{$guid}}'));

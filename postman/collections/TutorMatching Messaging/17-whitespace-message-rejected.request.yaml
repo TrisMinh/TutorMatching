@@ -1,0 +1,20 @@
+$kind: http-request
+name: Whitespace message rejected
+order: 17000
+url: '{{baseUrl}}/api/v1/conversations/{{conversationId}}/messages'
+method: POST
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{studentToken}}'
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {"body": "   ", "clientMessageId": "{{replyKey}}"}
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Whitespace message rejected', () => pm.response.to.have.status(400));

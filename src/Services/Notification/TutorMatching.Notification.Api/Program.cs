@@ -1,3 +1,5 @@
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
 using TutorMatching.BuildingBlocks.Email;
 using TutorMatching.BuildingBlocks.Security;
 using Microsoft.EntityFrameworkCore;
@@ -23,10 +25,14 @@ builder.Services.AddHostedService<CourseReminderSync>();
 builder.Services.AddHttpClient("tutor-reminders", client => { client.BaseAddress = new Uri(builder.Configuration["Services:Tutor"] ?? "http://tutor-service:8080"); client.Timeout = TimeSpan.FromSeconds(5); });
 builder.Services.AddHttpClient("scheduling-reminders", client => { client.BaseAddress = new Uri(builder.Configuration["Services:Scheduling"] ?? "http://scheduling-service:8080"); client.Timeout = TimeSpan.FromSeconds(5); });
 builder.Services.AddDependencyReadiness("database",(sp,ct)=>sp.GetRequiredService<NotificationDbContext>().Database.CanConnectAsync(ct));
+builder.Services.AddRateLimiter(options => options.AddPolicy("messaging", context => RateLimitPartition.GetFixedWindowLimiter(
+    context.User.FindFirst("sub")?.Value ?? context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+    _ => new FixedWindowRateLimiterOptions {PermitLimit=60,Window=TimeSpan.FromMinutes(1),QueueLimit=0,AutoReplenishment=true})));
 var app = builder.Build();
 
 app.MapTutorMatchingDefaults();
 app.MapNotificationEndpoints();
+app.MapConversationEndpoints();
 app.MapGet("/", () => Results.Ok(new { service = "notification", status = "ok" })).AllowAnonymous();
 
 await using (var scope = app.Services.CreateAsyncScope())

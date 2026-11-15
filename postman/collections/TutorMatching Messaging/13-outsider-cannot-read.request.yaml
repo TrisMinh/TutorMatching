@@ -1,0 +1,14 @@
+$kind: http-request
+name: Outsider cannot read
+order: 13000
+url: '{{baseUrl}}/api/v1/conversations/{{conversationId}}/messages'
+method: GET
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{strangerToken}}'
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Outsider cannot read', () => pm.response.to.have.status(404));

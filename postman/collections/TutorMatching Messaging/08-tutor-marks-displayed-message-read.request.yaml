@@ -1,0 +1,20 @@
+$kind: http-request
+name: Tutor marks displayed message read
+order: 8000
+url: '{{baseUrl}}/api/v1/conversations/{{conversationId}}/read'
+method: POST
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{tutorToken}}'
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {"messageId": {{messageId}}}
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Tutor marks displayed message read', () => pm.response.to.have.status(204));

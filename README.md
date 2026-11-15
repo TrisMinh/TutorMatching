@@ -209,3 +209,8 @@ Ba Scheduling giúp tiếp tục phục vụ qua replica còn khỏe; request đ
 ### Chẩn đoán rebuild
 
 `GMAIL_USERNAME` chấp nhận email đầy đủ hoặc tên Gmail chưa có `@gmail.com` (ứng dụng tự bổ sung). `rebuild.cmd` kiểm tra cấu hình mail trước khi build, chờ mọi container khỏe và kiểm tra HTTP của website, Gateway, pgAdmin. Log mỗi lần chạy được lưu trong `.logs/rebuild-*.log` (không đưa lên Git). Lỗi sẽ giữ cửa sổ mở; xem thông báo và log trước khi chạy lại. Build thành công không xác nhận Google đã chấp nhận App Password; cần thử gửi thư riêng để kiểm tra điều đó.
+
+
+### Nhắn tin với gia sư
+
+Hồ sơ gia sư có nút **Message tutor**. Cả Student/Tutor dùng mục **Messages** hoặc biểu tượng tin nhắn trên thanh đầu trang để xem hội thoại, gửi và trả lời. Tin nhắn văn bản lưu trong PostgreSQL của Notification service, có kiểm tra thành viên, số tin chưa đọc, tải tin cũ và chống gửi trùng; giao diện cập nhật mỗi 3 giây khi đang mở hội thoại. Giữ nguyên **5 service nghiệp vụ**. Xem [phạm vi và API messaging](docs/messaging-contract.md).

@@ -13,9 +13,10 @@ for(const role of ['Student','Tutor'] as const){
   await page.route('**/api/v1/courses/lifecycle-notifications',route=>route.fulfill({json:[]}));
   await page.route('**/api/v1/courses/enrollment-notifications',route=>route.fulfill({json:[]}));
   await page.route('**/api/v1/tutors?*',route=>route.fulfill({json:{items:[],page:1,pageSize:100,total:0}}));
-  if(role==='Tutor')await page.route('**/api/v1/tutors/me',async route=>{
-   const response=await route.fetch();const profile=await response.json();await route.fulfill({response,json:{...profile,availability:[]}});
-  });
+  if(role==='Tutor'){
+   const profile=await(await request.get('/api/v1/tutors/me',{headers:{Authorization:'Bearer '+session.accessToken}})).json();
+   await page.route('**/api/v1/tutors/me',route=>route.fulfill({json:{...profile,availability:[]}}));
+  }
   const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));
   const paths=role==='Student'?['/student/bookings','/student/notifications','/student/find-tutors','/student/book/review','/student/book/select-schedule']:['/tutor/requests','/tutor/notifications','/tutor/availability'];
   for(const width of [1920,768,390]){

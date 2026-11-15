@@ -22,6 +22,89 @@ namespace TutorMatching.Notification.Api.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("TutorMatching.Notification.Api.Domain.ChatMessage", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityAlwaysColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<Guid>("ClientMessageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ConversationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("SenderUserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConversationId", "Id");
+
+                    b.HasIndex("ConversationId", "SenderUserId", "ClientMessageId")
+                        .IsUnique();
+
+                    b.ToTable("chat_messages", (string)null);
+                });
+
+            modelBuilder.Entity("TutorMatching.Notification.Api.Domain.Conversation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("StudentName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<long>("StudentReadThrough")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("StudentUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TutorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TutorName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<long>("TutorReadThrough")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("TutorUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StudentUserId", "TutorUserId")
+                        .IsUnique();
+
+                    b.HasIndex("StudentUserId", "UpdatedAtUtc");
+
+                    b.HasIndex("TutorUserId", "UpdatedAtUtc");
+
+                    b.ToTable("conversations", (string)null);
+                });
+
             modelBuilder.Entity("TutorMatching.Notification.Api.Domain.NotificationItem", b =>
                 {
                     b.Property<Guid>("Id")
@@ -227,6 +310,15 @@ namespace TutorMatching.Notification.Api.Infrastructure.Migrations
                     b.HasKey("EventId");
 
                     b.ToTable("processed_events", (string)null);
+                });
+
+            modelBuilder.Entity("TutorMatching.Notification.Api.Domain.ChatMessage", b =>
+                {
+                    b.HasOne("TutorMatching.Notification.Api.Domain.Conversation", null)
+                        .WithMany()
+                        .HasForeignKey("ConversationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("TutorMatching.Notification.Api.Domain.NotificationItem", b =>
