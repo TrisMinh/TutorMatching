@@ -18,25 +18,25 @@ function renderAt(path: string) {
 }
 
 describe('tutor routes from Figma', () => {
-  it('keeps the calendar on Dashboard without a duplicate Schedule menu item',()=>{
+  it('keeps the calendar on Dashboard without a duplicate Schedule menu item',async()=>{
     renderAt('/tutor/dashboard');
     expect(screen.queryByRole('link',{name:'Schedule'})).not.toBeInTheDocument();
-    expect(screen.getByRole('link',{name:'Dashboard'})).toHaveAttribute('href','/tutor/dashboard');
+    expect(await screen.findByRole('link',{name:'Dashboard'})).toHaveAttribute('href','/tutor/dashboard');
   });
   it.each([
-    ['/tutor/dashboard', 'Good morning, Tutor'],
+    ['/tutor/dashboard', 'Good morning, Minh Anh'],
     ['/tutor/onboarding', 'Set up your tutor profile'],
     ['/tutor/subjects-pricing', 'Teaching subjects'],
     ['/tutor/availability', 'Availability'],
     ['/tutor/requests', 'My bookings'],
-    ['/tutor/schedule', 'Good morning, Tutor'],
+    ['/tutor/schedule', 'Good morning, Minh Anh'],
     ['/tutor/lessons/18-nov-math', 'Lesson details'],
     ['/tutor/public-profile', 'Public profile preview'],
     ['/tutor/notifications', 'Notifications'],
     ['/tutor/settings', 'Settings'],
-  ])('renders %s with heading %s', (path, heading) => {
+  ])('renders %s with heading %s', async (path, heading) => {
     renderAt(path);
-    expect(screen.getByRole('heading', { name: heading })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: heading }, {timeout:3500})).toBeInTheDocument();
     expect(screen.getByText('Tutor mode')).toBeInTheDocument();
   });
 

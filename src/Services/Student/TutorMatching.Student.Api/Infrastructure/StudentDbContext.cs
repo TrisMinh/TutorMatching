@@ -6,10 +6,14 @@ namespace TutorMatching.Student.Api.Infrastructure;
 public sealed class StudentDbContext(DbContextOptions<StudentDbContext> options) : DbContext(options)
 {
     public DbSet<StudentProfile> StudentProfiles => Set<StudentProfile>();
+    public DbSet<SavedTutor> SavedTutors => Set<SavedTutor>();
     public DbSet<SubjectInterest> SubjectInterests => Set<SubjectInterest>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        var saved = modelBuilder.Entity<SavedTutor>();
+        saved.ToTable("saved_tutors"); saved.HasKey(s => new {s.StudentId,s.TutorId});
+        saved.HasOne<StudentProfile>().WithMany().HasForeignKey(s => s.StudentId).OnDelete(DeleteBehavior.Cascade);
         var profiles = modelBuilder.Entity<StudentProfile>();
         profiles.ToTable("student_profiles", table =>
             table.HasCheckConstraint("ck_student_status", "status IN ('Active', 'Suspended')"));

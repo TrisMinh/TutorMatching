@@ -1,7 +1,7 @@
 import {AccountSettingsPanel} from '../../shared/AccountSettingsPanel';
 import { useCallback, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { gatewayClient, type GatewayError, type NotificationItem } from '../../api';
+import { browserSession, gatewayClient, type GatewayError, type NotificationItem } from '../../api';
 import { useGatewayResource } from '../../api/useGatewayResource';
 import { Button } from '../../design-system/Button';
 import { TextField } from '../../design-system/TextField';
@@ -28,7 +28,7 @@ function apiMessage(reason: unknown, fallback: string) {
 
 export function TutorOnboarding() {
   const navigate = useMotionNavigate();
-  const [headline, setHeadline] = useState('');
+  const [headline, setHeadline] = useState(browserSession.load()?.displayName ?? '');
   const [bio, setBio] = useState('');
   const [experienceYears, setExperienceYears] = useState('0');
   const [avatar,setAvatar]=useState<string>();
@@ -53,6 +53,7 @@ export function TutorOnboarding() {
       });
       window.sessionStorage.setItem(tutorProfileKey, profile.id);
       window.dispatchEvent(new Event('tutormatching:tutor-profile-updated'));
+      window.dispatchEvent(new Event('tutormatching:profile-updated'));
       navigate('/tutor/subjects-pricing', { viewTransition: true });
     } catch (reason) {
       setError(apiMessage(reason, 'Unable to save your tutor profile.'));
@@ -62,7 +63,7 @@ export function TutorOnboarding() {
   }
 
   return tutorShell('profile','Set up your tutor profile','tutor-onboarding',<>
-    <p className="tutor-step">Profile basics</p><section className="student-card tutor-form-card"><h2>Build a profile students can trust</h2><TextField label="Display name" onChange={(event) => setHeadline(event.target.value)} value={headline}/><TextField label="Bio" onChange={(event) => setBio(event.target.value)} value={bio}/><TextField label="Years of experience" min="0" onChange={(event) => setExperienceYears(event.target.value)} type="number" value={experienceYears}/></section>{error ? <p className="tm-field__message tm-field__message--error" role="alert">{error}</p> : null}<>{profileLoadFailed&&<Button variant="secondary" onClick={()=>{setInitializing(true);setLoadAttempt(v=>v+1);}}>Retry loading profile</Button>}</><Button className="tutor-form-save" disabled={saving||initializing||profileLoadFailed||!headline.trim()} onClick={saveProfile} size="large">{initializing?'Loading…':saving ? 'Saving…' : 'Save & continue'}</Button>
+    <p className="tutor-step">Profile basics</p><section className="student-card tutor-form-card"><h2>Build a profile students can trust</h2><TextField label="Display name" onChange={(event) => setHeadline(event.target.value)} value={headline}/><div className="tm-field"><label className="tm-field__label" htmlFor="tutor-profile-bio">Bio</label><textarea className="tm-field__input" id="tutor-profile-bio" rows={4} maxLength={4000} onChange={event=>setBio(event.target.value)} value={bio}/></div><TextField label="Years of experience" min="0" onChange={(event) => setExperienceYears(event.target.value)} type="number" value={experienceYears}/></section>{error ? <p className="tm-field__message tm-field__message--error" role="alert">{error}</p> : null}<>{profileLoadFailed&&<Button variant="secondary" onClick={()=>{setInitializing(true);setLoadAttempt(v=>v+1);}}>Retry loading profile</Button>}</><Button className="tutor-form-save" disabled={saving||initializing||profileLoadFailed||!headline.trim()} onClick={saveProfile} size="large">{initializing?'Loading…':saving ? 'Saving…' : 'Save & continue'}</Button>
   </>);
 }
 

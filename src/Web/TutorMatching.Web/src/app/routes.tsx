@@ -29,6 +29,6 @@ export const appRoutes: AppRoute[] = [
   ...authRoutes,
   ...studentRoutes.map((route) => ({ ...route, access: 'Student' as const })),
   ...tutorRoutes.map((route) => ({ ...route, access: 'Tutor' as const })),
-  ...stateRoutes,
+  ...(import.meta.env.DEV ? stateRoutes : []),
   { path: '*', element: <NotFoundFoundation /> },
 ];

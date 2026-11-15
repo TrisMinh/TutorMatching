@@ -82,7 +82,9 @@ public static class BookingEndpoints
             request.StartAtUtc,
             authorization,
             cancellationToken);
-        if (student is null || tutor is null)
+        if (student is null)
+            return Results.Json(new {code = "student_profile_required", error = "Complete your student profile before booking a lesson."}, statusCode: 422);
+        if (tutor is null)
         {
             return Results.Problem(
                 title: "A required profile service is unavailable or the profile does not exist.",

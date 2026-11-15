@@ -14,7 +14,7 @@
 
 ## Hai nhánh có mục đích khác nhau
 
-- `codex/scheduling-coursework`: bản gọn để học/chấm demo, 3 Scheduling và mỗi API khác/Gateway 1, Docker Compose + `.env`.
-- [codex/advanced-service-security](https://github.com/TrisMinh/TutorMatching/tree/codex/advanced-service-security): lưu nguyên bản mở rộng RSA/mTLS, revocation Redis, signed event và audit HMAC. Không cần những lớp này để đáp ứng ba điều kiện tối thiểu của đề.
+- `feat/scheduling-coursework`: bản gọn để học/chấm demo, 3 Scheduling và mỗi API khác/Gateway 1, Docker Compose + `.env`.
+- [feat/advanced-service-security](https://github.com/TrisMinh/TutorMatching/tree/feat/advanced-service-security): lưu nguyên bản mở rộng RSA/mTLS, revocation Redis, signed event và audit HMAC. Không cần những lớp này để đáp ứng ba điều kiện tối thiểu của đề.
 
 Nhánh gọn giữ UI, course/enrollment, booking, lịch và dữ liệu demo; không phải quay lại bản frontend sơ khai. Không mô tả môi trường HTTP/HMAC cục bộ này là cấu hình ngân hàng hay production security.

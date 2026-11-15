@@ -3,6 +3,7 @@ name: TutorMatching Smoke
 description: End-to-end smoke flow through the public API Gateway.
 variables:
   baseUrl: 'http://localhost:8080'
+  mailpitBaseUrl: 'http://localhost:8025'
   password: 'TutorMatching!123'
   runId: ''
   studentToken: ''

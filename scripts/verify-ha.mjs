@@ -1,3 +1,5 @@
+import {requireMailpitForDemo} from './verify-demo-email.mjs';
+requireMailpitForDemo();
 import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
 const compose=['compose','-f','compose.yaml','-f','compose.ha.yaml'];

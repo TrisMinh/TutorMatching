@@ -14,6 +14,29 @@ public static class StudentEndpoints
         group.MapGet("/me", GetMeAsync);
         group.MapPut("/me", UpsertAsync);
         group.MapPut("/me/interests", ReplaceInterestsAsync);
+        group.MapGet("/me/saved-tutors", async (ClaimsPrincipal user, StudentDbContext db, CancellationToken ct) =>
+        {
+            var uid = GetUserId(user);
+            return await db.SavedTutors.Where(s => db.StudentProfiles.Any(p => p.Id == s.StudentId && p.UserId == uid)).Select(s => s.TutorId).ToArrayAsync(ct);
+        });
+        group.MapPut("/me/saved-tutors/{tutorId:guid}", async (Guid tutorId, ClaimsPrincipal user, StudentDbContext db, StudentProfileBootstrap bootstrap, IHttpClientFactory clients, IConfiguration config, CancellationToken ct) =>
+        {
+            var uid = GetUserId(user);
+            var profile = await bootstrap.EnsureAsync(uid, ct);
+            if (profile is null) return Results.Problem(statusCode: 422, title: "Your student account could not be loaded.");
+            if (await db.SavedTutors.AnyAsync(s => s.StudentId == profile.Id && s.TutorId == tutorId, ct)) return Results.NoContent();
+            using var response = await clients.CreateClient().GetAsync((config["Services:Tutor"] ?? "http://tutor-service:8080") + "/api/v1/tutors/" + tutorId, ct);
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound) return Results.NotFound();
+            if (!response.IsSuccessStatusCode) return Results.Problem(statusCode: 503, title: "Unable to check this tutor.");
+            db.SavedTutors.Add(new SavedTutor {StudentId = profile.Id,TutorId = tutorId,CreatedAtUtc = DateTimeOffset.UtcNow});
+            await db.SaveChangesAsync(ct); return Results.NoContent();
+        });
+        group.MapDelete("/me/saved-tutors/{tutorId:guid}", async (Guid tutorId, ClaimsPrincipal user, StudentDbContext db, CancellationToken ct) =>
+        {
+            var uid = GetUserId(user);
+            var rows = await db.SavedTutors.Where(s => s.TutorId == tutorId && db.StudentProfiles.Any(p => p.Id == s.StudentId && p.UserId == uid)).ToListAsync(ct);
+            db.SavedTutors.RemoveRange(rows);await db.SaveChangesAsync(ct);return Results.NoContent();
+        });
 
         endpoints.MapGet("/internal/v1/students/by-user/{userId:guid}", GetByUserIdAsync)
             .RequireAuthorization()
@@ -24,9 +47,11 @@ public static class StudentEndpoints
     private static async Task<IResult> GetMeAsync(
         ClaimsPrincipal principal,
         StudentDbContext dbContext,
+        StudentProfileBootstrap bootstrap,
         CancellationToken cancellationToken)
     {
         var userId = GetUserId(principal);
+        await bootstrap.EnsureAsync(userId, cancellationToken);
         var profile = await dbContext.StudentProfiles.AsNoTracking()
             .Where(candidate => candidate.UserId == userId)
             .Select(candidate => new
@@ -111,8 +136,10 @@ public static class StudentEndpoints
     private static async Task<IResult> GetByUserIdAsync(
         Guid userId,
         StudentDbContext dbContext,
+        StudentProfileBootstrap bootstrap,
         CancellationToken cancellationToken)
     {
+        await bootstrap.EnsureAsync(userId, cancellationToken);
         var profile = await dbContext.StudentProfiles.AsNoTracking()
             .Where(candidate => candidate.UserId == userId && candidate.Status == StudentStatus.Active)
             .Select(candidate => new { candidate.Id, candidate.UserId, candidate.DisplayName, candidate.Timezone, candidate.AvatarUrl, EducationLevel=candidate.EducationLevel.ToString(), candidate.LearningGoal })
@@ -128,9 +155,9 @@ public static class StudentEndpoints
 
 public sealed record StudentProfileRequest(
     string DisplayName,
-    EducationLevel EducationLevel,
-    string LearningGoal,
-    string Timezone,
+    EducationLevel EducationLevel = EducationLevel.Unspecified,
+    string LearningGoal = "",
+    string Timezone = "Asia/Ho_Chi_Minh",
     string? AvatarUrl = null);
 
 public sealed record SubjectInterestRequest(Guid SubjectId, int Priority);

@@ -1,3 +1,5 @@
+import {requireMailpitForDemo, verifyDemoEmail} from './verify-demo-email.mjs';
+requireMailpitForDemo();
 // Local demo accounts only. Uses production API validation and event delivery.
 const base = 'http://localhost:8080/api/v1';
 const password = 'TutorDemo!2026';
@@ -9,7 +11,14 @@ async function api(path, method = 'GET', body, token) {
 async function account(email, role) {
   const response = await fetch(base + '/auth/register', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password,role})});
   if (!response.ok && response.status !== 409) throw new Error(await response.text());
-  return (await api('/auth/login','POST',{email,password})).accessToken;
+  if (response.status === 201) await verifyDemoEmail(email);
+  let login = await fetch(base + '/auth/login', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password})});
+  if (login.status === 403) {await verifyDemoEmail(email); login = await fetch(base + '/auth/login', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password})});}
+  if (!login.ok) throw new Error('Unable to log in to demo account: ' + login.status);
+  const token = (await login.json()).accessToken;
+  const settings = await api('/users/me/settings','GET',undefined,token);
+  if (settings.emailReminders) await api('/users/me/settings','PUT',{...settings,emailReminders:false},token);
+  return token;
 }
 const subjects = await api('/subjects');
 if (!subjects.length) throw new Error('Subject catalog is empty');
@@ -31,7 +40,7 @@ for(let i=0;i<24;i++) {
   await api('/students/me','PUT',{displayName:`${names[i%names.length]} ${i+1}`,educationLevel:2,learningGoal:`Improve ${subjects[i%subjects.length].name} through weekly practice and prepare for the next school examination.`,timezone:'Asia/Ho_Chi_Minh',avatarUrl:`/assets/figma/dashboard-avatar-${1+i%3}.png`},token);
   await api('/students/me/interests','PUT',[{subjectId:subjects[i%subjects.length].id,priority:1}],token);
   const existing=await api('/bookings','GET',undefined,token);
-  if(existing.length) continue;
+  if(existing.some(booking=>booking.status==='Confirmed'&&Date.parse(booking.endAtUtc)>Date.now())) continue;
   for(let lesson=0;lesson<4;lesson++) {
     const tutor=tutors[i%tutors.length];
     const slot=new Date(start);slot.setUTCDate(slot.getUTCDate()+lesson*3+Math.floor(i/18));slot.setUTCHours(2+i%6);

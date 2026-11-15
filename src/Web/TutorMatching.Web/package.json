@@ -9,7 +9,8 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:visual": "playwright test",
-    "test:e2e:live": "playwright test --config playwright.live.config.ts"
+    "test:e2e:live": "playwright test --config playwright.live.config.ts",
+    "audit:ui": "node tests/audit/ui-audit.mjs"
   },
   "dependencies": {
     "react": "19.3.1",

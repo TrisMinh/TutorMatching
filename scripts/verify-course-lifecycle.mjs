@@ -1,8 +1,10 @@
+import {requireMailpitForDemo, verifyDemoEmail} from './verify-demo-email.mjs';
+requireMailpitForDemo();
 import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
 const base='http://localhost:8080/api/v1',stamp=Date.now(),password='CourseLifecycle!2026';
 async function api(path,method='GET',body,token,status=200){const r=await fetch(base+path,{method,headers:{'Content-Type':'application/json',...(token?{Authorization:`Bearer ${token}`}:{})},body:body===undefined?undefined:JSON.stringify(body),signal:AbortSignal.timeout(12000)});assert.equal(r.status,status,`${method} ${path}: ${r.status} ${await r.clone().text()}`);const text=await r.text();return text?JSON.parse(text):null;}
-async function account(role,suffix){const email=`lifecycle.fixture.${stamp}.${suffix}@example.com`;await api('/auth/register','POST',{email,password,role},undefined,201);return (await api('/auth/login','POST',{email,password})).accessToken;}
+async function account(role,suffix){const email=`lifecycle.fixture.${stamp}.${suffix}@example.com`;await api('/auth/register','POST',{email,password,role},undefined,201);await verifyDemoEmail(email);return (await api('/auth/login','POST',{email,password})).accessToken;}
 function sql(service,user,db,query){return execFileSync('docker',['compose','exec','-T',service,'psql','-v','ON_ERROR_STOP=1','-U',user,'-d',db,'-At','-c',query],{encoding:'utf8'}).trim();}
 const ids=[];
 try{

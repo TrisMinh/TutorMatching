@@ -1,3 +1,4 @@
+using TutorMatching.BuildingBlocks.Security;
 using Microsoft.EntityFrameworkCore;
 using TutorMatching.BuildingBlocks.Hosting;
 using TutorMatching.Student.Api.Endpoints;
@@ -9,6 +10,12 @@ builder.Services.AddDbContext<StudentDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("StudentDb")
         ?? "Host=localhost;Port=54323;Database=student_db;Username=student_app;Password=student_dev"));
 builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddHttpClient();
+builder.Services.AddHttpClient<AccountDirectoryClient>(client => {
+    client.BaseAddress = new Uri(builder.Configuration["Services:Identity"] ?? "http://identity-service:8080");
+    client.Timeout = TimeSpan.FromSeconds(5);
+});
+builder.Services.AddScoped<StudentProfileBootstrap>();
 builder.Services.AddDependencyReadiness("database",(sp,ct)=>sp.GetRequiredService<StudentDbContext>().Database.CanConnectAsync(ct));
 var app = builder.Build();
 

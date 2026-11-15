@@ -1,3 +1,4 @@
+using TutorMatching.BuildingBlocks.Email;
 using System.Net;
 using System.Net.Mail;
 using Microsoft.EntityFrameworkCore;
@@ -36,22 +37,13 @@ public sealed class SmtpEmailSender(IConfiguration configuration,
         var end = TimeZoneInfo.ConvertTime(details.EndAtUtc, zone);
         var origin = configuration["Frontend:Origin"] ?? "http://localhost:3000";
         var link = origin.TrimEnd('/') + "/" + (account.Role == "Tutor" ? "tutor" : "student") + "/dashboard";
+        var email = SmtpSettings.FromConfiguration(configuration);
         using var message = new MailMessage(
-            configuration["Email:From"] ?? "no-reply@demo.tutormatching.local",
+            email.From,
             account.Email,
             "Upcoming lesson: " + details.Title,
             $"{details.Title}\n{start:dd MMM yyyy, HH:mm} – {end:HH:mm} (GMT+07:00 Vietnam)\nYour lesson starts soon. View your schedule: {link}\nManage email reminders in Settings.");
-        using var client = new SmtpClient(
-            configuration["Email:Host"] ?? "localhost",
-            configuration.GetValue("Email:Port", 1025))
-        {
-            EnableSsl = configuration.GetValue("Email:EnableSsl", false),
-        };
-        var username = configuration["Email:Username"];
-        if (!string.IsNullOrWhiteSpace(username))
-        {
-            client.Credentials = new NetworkCredential(username, configuration["Email:Password"]);
-        }
+        using var client = email.CreateClient();
 
         await client.SendMailAsync(message, cancellationToken);
     }

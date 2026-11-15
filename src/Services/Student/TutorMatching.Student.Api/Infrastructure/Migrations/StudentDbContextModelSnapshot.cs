@@ -22,6 +22,22 @@ namespace TutorMatching.Student.Api.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("TutorMatching.Student.Api.Domain.SavedTutor", b =>
+                {
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TutorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("StudentId", "TutorId");
+
+                    b.ToTable("saved_tutors", (string)null);
+                });
+
             modelBuilder.Entity("TutorMatching.Student.Api.Domain.StudentProfile", b =>
                 {
                     b.Property<Guid>("Id")
@@ -115,6 +131,15 @@ namespace TutorMatching.Student.Api.Infrastructure.Migrations
                         {
                             t.HasCheckConstraint("ck_interest_priority", "priority BETWEEN 1 AND 5");
                         });
+                });
+
+            modelBuilder.Entity("TutorMatching.Student.Api.Domain.SavedTutor", b =>
+                {
+                    b.HasOne("TutorMatching.Student.Api.Domain.StudentProfile", null)
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("TutorMatching.Student.Api.Domain.SubjectInterest", b =>

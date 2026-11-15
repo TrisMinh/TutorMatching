@@ -51,6 +51,31 @@ namespace TutorMatching.Identity.Api.Infrastructure.Migrations
                     b.ToTable("account_settings", (string)null);
                 });
 
+            modelBuilder.Entity("TutorMatching.Identity.Api.Domain.EmailVerification", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CodeHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .IsFixedLength();
+
+                    b.Property<DateTimeOffset>("ExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("FailedAttempts")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("SentAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("UserId");
+
+                    b.ToTable("email_verifications", (string)null);
+                });
+
             modelBuilder.Entity("TutorMatching.Identity.Api.Domain.PasswordReset", b =>
                 {
                     b.Property<Guid>("Id")
@@ -144,6 +169,14 @@ namespace TutorMatching.Identity.Api.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at_utc");
 
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasDefaultValue("")
+                        .HasColumnName("display_name");
+
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(320)
@@ -234,6 +267,15 @@ namespace TutorMatching.Identity.Api.Infrastructure.Migrations
                 });
 
             modelBuilder.Entity("TutorMatching.Identity.Api.Domain.AccountSettings", b =>
+                {
+                    b.HasOne("TutorMatching.Identity.Api.Domain.UserAccount", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("TutorMatching.Identity.Api.Domain.EmailVerification", b =>
                 {
                     b.HasOne("TutorMatching.Identity.Api.Domain.UserAccount", null)
                         .WithMany()

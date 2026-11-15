@@ -17,6 +17,7 @@ public sealed class AccountRecoveryTests(IdentityApiFactory factory) : IClassFix
         var client=factory.CreateClient();var email=$"settings-{Guid.NewGuid():N}@example.com";
         var register=await client.PostAsJsonAsync("/api/v1/auth/register",new{email,password="OriginalPassword!123",role});
         Assert.Equal(HttpStatusCode.Created,register.StatusCode);
+        await factory.VerifyEmailAsync(client, email);
         var login=await client.PostAsJsonAsync("/api/v1/auth/login",new{email,password="OriginalPassword!123"});
         var tokens=await login.Content.ReadFromJsonAsync<JsonElement>();
         client.DefaultRequestHeaders.Authorization=new AuthenticationHeaderValue("Bearer",tokens.GetProperty("accessToken").GetString());

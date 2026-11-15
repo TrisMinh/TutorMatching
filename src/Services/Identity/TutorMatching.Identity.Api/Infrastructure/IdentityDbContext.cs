@@ -10,10 +10,16 @@ public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> option
     public DbSet<SecurityAuditEvent> SecurityAuditEvents => Set<SecurityAuditEvent>();
 
     public DbSet<AccountSettings> AccountSettings => Set<AccountSettings>();
+    public DbSet<EmailVerification> EmailVerifications => Set<EmailVerification>();
     public DbSet<PasswordReset> PasswordResets => Set<PasswordReset>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        var verification = modelBuilder.Entity<EmailVerification>();
+        verification.ToTable("email_verifications");
+        verification.HasKey(v => v.UserId);
+        verification.Property(v => v.CodeHash).HasMaxLength(64).IsFixedLength();
+        verification.HasOne<UserAccount>().WithMany().HasForeignKey(v => v.UserId).OnDelete(DeleteBehavior.Cascade);
         var preferences = modelBuilder.Entity<AccountSettings>();
         preferences.ToTable("account_settings");
         preferences.HasKey(s => s.UserId);
@@ -29,6 +35,7 @@ public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> option
         users.ToTable("user_accounts");
         users.HasKey(account => account.Id);
         users.Property(account => account.Id).HasColumnName("id").ValueGeneratedNever();
+        users.Property(account => account.DisplayName).HasColumnName("display_name").HasMaxLength(100).HasDefaultValue(string.Empty);
         users.Property(account => account.Email).HasColumnName("email").HasMaxLength(320).IsRequired();
         users.Property(account => account.NormalizedEmail).HasColumnName("normalized_email").HasMaxLength(320).IsRequired();
         users.HasIndex(account => account.NormalizedEmail).IsUnique();

@@ -1,3 +1,5 @@
+import {requireMailpitForDemo, verifyDemoEmail} from './verify-demo-email.mjs';
+requireMailpitForDemo();
 // Local integration verification. Unique disposable accounts, no demo account password changes.
 import assert from 'node:assert/strict';
 const base='http://localhost:8080/api/v1';
@@ -11,6 +13,7 @@ async function api(path,method='GET',body,token,status=200){
 async function account(role,suffix){
  const email=`account.fixture.${stamp}.${suffix}@example.com`;
  await api('/auth/register','POST',{email,password,role},undefined,201);
+ await verifyDemoEmail(email);
  return {email,...await api('/auth/login','POST',{email,password})};
 }
 try {

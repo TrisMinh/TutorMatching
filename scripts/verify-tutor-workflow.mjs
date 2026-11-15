@@ -1,3 +1,5 @@
+import {requireMailpitForDemo, verifyDemoEmail} from './verify-demo-email.mjs';
+requireMailpitForDemo();
 import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
 const base='http://localhost:8080/api/v1';const password='TutorDemo!2026';const stamp=Date.now();
@@ -10,8 +12,9 @@ async function withCrashedOwner(response,action){
  finally{execFileSync('docker',['start',victim]);execFileSync('docker',['update','--restart=unless-stopped',victim]);}
 }
 async function call(path,method='GET',body,token){return fetch(base+path,{method,headers:{'Content-Type':'application/json',...(token?{Authorization:`Bearer ${token}`}:{})},body:body===undefined?undefined:JSON.stringify(body)});}
-async function account(role,suffix){const email=`audit.${stamp}.${suffix}@demo.tutormatching.test`;const registered=await call('/auth/register','POST',{email,password,role});assert.equal(registered.status,201,await registered.text());const login=await call('/auth/login','POST',{email,password});assert.equal(login.status,200);return (await login.json()).accessToken;}
+async function account(role,suffix){const email=`audit.${stamp}.${suffix}@demo.tutormatching.test`;const registered=await call('/auth/register','POST',{email,password,role});assert.equal(registered.status,201,await registered.text());await verifyDemoEmail(email);const login=await call('/auth/login','POST',{email,password});assert.equal(login.status,200);return (await login.json()).accessToken;}
 const tutor=await account('Tutor','teacher');const student=await account('Student','learner');const stranger=await account('Tutor','stranger');
+try {
 const subjects=await (await call('/subjects')).json();const subjectId=subjects[0].id;
 assert.equal((await call('/tutors/me','GET',undefined,student)).status,403);
 assert.equal((await call('/tutors/me','GET',undefined,stranger)).status,404);
@@ -63,3 +66,5 @@ while(Date.now()<noticeDeadline){
 assert.ok(delivered,'Both signed booking events must be delivered to the participant through RabbitMQ');
 console.log('PASS: confirmed/cancelled events traversed broker and reached the authenticated participant notification list.');
 console.log('PASS: tutor isolation, availability validation, schedule conflicts, confirmed booking replay after hold release, wrong token/owner rejection, duplicate prevention and idempotent cancellation.');
+
+} finally { await import('./cleanup-public-test-fixtures.mjs'); }

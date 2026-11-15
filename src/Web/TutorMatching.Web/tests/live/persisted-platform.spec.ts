@@ -1,0 +1,55 @@
+import {test,expect} from '@playwright/test';
+import {verifyEmail} from './verifyEmail';
+
+test('new account profile, saved tutor, booking, notification and course enrollment share persisted data',async({page,request})=>{
+ test.setTimeout(90000);
+ const base='http://localhost:8080/api/v1',email=`platform.linked.${Date.now()}@example.com`,password='LinkedPlatform!2026';
+ expect((await request.post(base+'/auth/register',{data:{email,password,role:'Student',fullName:'Linked Flow Learner'}})).status()).toBe(201);
+ await verifyEmail(request,email);
+ const login=await request.post(base+'/auth/login',{data:{email,password}});expect(login.status()).toBe(200);
+ const session={...await login.json(),role:'Student',email,displayName:'Linked Flow Learner'},headers={Authorization:'Bearer '+session.accessToken};
+ const settings=await (await request.get(base+'/users/me/settings',{headers})).json();
+ expect((await request.put(base+'/users/me/settings',{headers,data:{...settings,emailReminders:false}})).ok()).toBeTruthy();
+ await page.addInitScript(value=>sessionStorage.setItem('tutormatching.auth.session',JSON.stringify(value)),session);
+ await page.goto('/student/dashboard');await expect(page).toHaveURL(/\/student\/complete-profile$/);
+ await expect(page.getByLabel('Display name')).toHaveValue('Linked Flow Learner');
+ await page.getByRole('combobox',{name:'School level'}).click();await page.getByRole('option',{name:'University',exact:true}).click();
+ await page.getByLabel('Learning goal').fill('Practice with a real, linked tutor schedule');
+ await page.getByRole('button',{name:'Save & continue',exact:true}).click();await expect(page).toHaveURL(/\/student\/find-tutors$/);
+ const profile=await (await request.get(base+'/students/me',{headers})).json();expect(profile.displayName).toBe('Linked Flow Learner');
+ const teacherLogin=await (await request.post(base+'/auth/login',{data:{email:'tutor18@demo.tutormatching.test',password:'TutorDemo!2026'}})).json();
+ const teacherHeaders={Authorization:'Bearer '+teacherLogin.accessToken};
+ const teacher=await (await request.get(base+'/tutors/me',{headers:teacherHeaders})).json();
+ const card=page.locator('.tutor-card').filter({hasText:teacher.displayName}).first();
+ await card.getByRole('button',{name:'Save '+teacher.displayName,exact:true}).click();
+ await expect(card.getByRole('button',{name:'Remove '+teacher.displayName,exact:true})).toBeVisible();
+ await page.reload();await expect(page.locator('.tutor-card').filter({hasText:teacher.displayName}).first().getByRole('button',{name:'Remove '+teacher.displayName,exact:true})).toBeVisible();
+ expect((await (await request.get(base+'/students/me/saved-tutors',{headers})).json())).toContain(teacher.id);
+ const subjectId=teacher.subjects[0].subjectId;
+ let chosen:{startAtUtc:string;endAtUtc:string}|undefined;
+ for(let offset=3;offset<12&&!chosen;offset++){
+  const day=new Date(Date.now()+offset*86400000).toISOString().slice(0,10);
+  const response=await request.get(base+'/search/available-tutors',{headers,params:{subjectId,date:day,timezone:'Asia/Ho_Chi_Minh',page:1,pageSize:100}});expect(response.status()).toBe(200);
+  chosen=(await response.json()).items.find((t:{id:string})=>t.id===teacher.id)?.availableSlots[0];
+ }
+ expect(chosen).toBeTruthy();
+ await page.goto(`/student/book/select-schedule?tutorId=${teacher.id}&subjectId=${subjectId}&startAtUtc=${encodeURIComponent(chosen!.startAtUtc)}`);
+ const time=(value:string)=>new Date(value).toLocaleTimeString('en-GB',{timeZone:'Asia/Ho_Chi_Minh',hour:'2-digit',minute:'2-digit'});
+ await page.getByRole('button',{name:time(chosen!.startAtUtc)+' – '+time(chosen!.endAtUtc),exact:true}).click();
+ await page.getByRole('button',{name:'Continue',exact:true}).click();await expect(page).toHaveURL(/\/student\/book\/review$/);
+ await expect(page.getByText(teacher.displayName,{exact:true}).first()).toBeVisible();
+ await page.getByRole('button',{name:'Confirm booking',exact:true}).click();await expect(page).toHaveURL(/\/student\/book\/confirmed\?bookingId=/);
+ const bookingId=new URL(page.url()).searchParams.get('bookingId')!;
+ await page.reload();await expect(page.getByRole('heading',{name:'Your lesson is booked!'})).toBeVisible();
+ const saved=await (await request.get(base+'/bookings/'+bookingId,{headers})).json();expect(saved.booking.studentId).toBe(profile.id);expect(saved.booking.tutorId).toBe(teacher.id);expect(Date.parse(saved.booking.startAtUtc)).toBe(Date.parse(chosen!.startAtUtc));
+ expect((await (await request.get(base+'/bookings',{headers:teacherHeaders})).json()).some((b:{id:string})=>b.id===bookingId)).toBeTruthy();
+ await expect.poll(async()=>{const notifications=await (await request.get(base+'/notifications?page=1&pageSize=100',{headers})).json();return notifications.items.some((n:{bookingId:string})=>n.bookingId===bookingId);},{timeout:15000}).toBeTruthy();
+ await page.goto('/student/bookings/'+bookingId);await page.getByRole('button',{name:'Cancel booking',exact:true}).click();await expect(page.getByRole('button',{name:'Booking cancelled',exact:true})).toBeDisabled();
+ expect((await (await request.get(base+'/bookings/'+bookingId,{headers:teacherHeaders})).json()).booking.status).toBe('Cancelled');
+ const courses=await (await request.get(base+'/courses')).json();const course=courses.find((c:{id:string;status:string;enrolled:number;capacity:number;sessions:Array<{startAtUtc:string}>})=>c.id.startsWith('catalog-')&&c.status==='Open'&&c.enrolled<c.capacity&&c.sessions.every(s=>Date.parse(s.startAtUtc)>Date.now()));expect(course).toBeTruthy();
+ await page.goto('/student/courses/'+course.id);await page.getByRole('button',{name:'Enroll in course',exact:true}).click();await expect(page.getByRole('button',{name:'Enrolled',exact:true})).toBeDisabled();
+ expect((await (await request.get(base+'/courses/mine',{headers})).json()).some((c:{id:string})=>c.id===course.id)).toBeTruthy();
+ await page.reload();await expect(page.getByRole('button',{name:'Enrolled',exact:true})).toBeDisabled();
+ await page.getByRole('button',{name:'Cancel registration',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'Confirm',exact:true}).click();await expect(page.getByRole('button',{name:'Enroll in course',exact:true})).toBeEnabled();
+ expect((await (await request.get(base+'/courses/mine',{headers})).json()).some((c:{id:string})=>c.id===course.id)).toBeFalsy();
+});

@@ -1,0 +1,13 @@
+$kind: http-request
+name: Read student verification code
+order: 2200
+url: '{{mailpitBaseUrl}}/api/v1/message/{{studentVerificationMessageId}}'
+method: GET
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('verification message readable', () => pm.response.to.have.status(200));
+      const code = pm.response.json().Text.match(/verification code is: (\d{6})/)[1];
+      pm.collectionVariables.set('studentVerificationCode', code);

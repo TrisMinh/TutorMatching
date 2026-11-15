@@ -52,7 +52,13 @@ Gateway tổng hợp thông tin Tutor với booked slots từ Scheduling để t
 
 ## Khởi chạy bằng Docker Compose
 
-Yêu cầu **Docker Desktop chạy Linux containers**, Docker Compose v2 và PowerShell nếu dùng script. Chạy trong thư mục gốc repository:
+**Máy Windows mới:** nhấp đúp **`setup.cmd`** để kiểm tra/cài WSL2, Docker Desktop và Git, rồi mở Docker Desktop và chạy **`rebuild.cmd`**. Xem [hướng dẫn cài đặt máy mới và pgAdmin](docs/setup-windows.md).
+
+Yêu cầu **Docker Desktop chạy Linux containers**, Docker Compose v2 và PowerShell nếu dùng script.
+
+**Trên Windows:** mở Docker Desktop, sau đó nhấp đúp **`rebuild.cmd`** ở thư mục gốc. File này tự tạo `.env` từ mẫu nếu chưa có, build lại code, cập nhật container và chờ hệ thống sẵn sàng. Sau mỗi lần sửa code hoặc đổi `.env`, nhấp đúp lại file này; dữ liệu trong database volume được giữ nguyên. Nếu có lỗi, cửa sổ giữ mở để đọc thông báo. Nếu `.env` chưa có, chỉnh cấu hình trong file mới tạo rồi chạy lại khi cần.
+
+Nếu muốn thao tác bằng lệnh, chạy trong thư mục gốc repository:
 
 ```powershell
 # Chỉ tạo khi chưa có .env; không ghi đè password của volume hiện có.
@@ -78,6 +84,7 @@ docker compose -f compose.yaml -f compose.ha.yaml ps
 | [localhost:8080/health/ready](http://localhost:8080/health/ready) | Gateway readiness |
 | [localhost:8404](http://localhost:8404) | HAProxy stats |
 | [localhost:8025](http://localhost:8025) | Mailpit — email demo |
+| [localhost:5050](http://localhost:5050) | pgAdmin — xem 5 database |
 
 `compose.yaml` đơn lẻ chạy một instance mỗi API để phát triển; `compose.ha.yaml` tăng riêng Scheduling lên ba. API nội bộ và database không publish cổng trong cấu hình demo. Dùng `compose.debug.yaml` khi cần cổng loopback để debug.
 
@@ -89,7 +96,43 @@ docker compose -f compose.yaml -f compose.ha.yaml stop
 
 **Không dùng `down -v` nếu muốn giữ tài khoản, khóa học và booking.**
 
+## Xem database bằng pgAdmin
+
+Mở [localhost:5050](http://localhost:5050), đăng nhập bằng `PGADMIN_EMAIL` và `LOCAL_ADMIN_PASSWORD` trong `.env`. Nhóm **TutorMatching** có sẵn 5 server. Khi kết nối, nhập mật khẩu `LOCAL_ADMIN_PASSWORD` tương ứng trong `.env`. Xem [bảng thông tin kết nối và cách mở bảng dữ liệu](docs/setup-windows.md#xem-dữ-liệu-bằng-pgadmin). `rebuild.cmd` đồng bộ mật khẩu với các database và tài khoản pgAdmin đã tồn tại, giữ nguyên dữ liệu.
+
+## Chọn Mailpit hoặc Gmail
+
+Mở `.env` ở thư mục gốc (cùng chỗ với `compose.yaml`). Chỉ cần đổi **một biến** để chọn nơi gửi:
+
+```dotenv
+EMAIL_PROVIDER=mailpit
+```
+
+Để gửi thư thật qua Gmail, điền tài khoản và App Password một lần:
+
+```dotenv
+EMAIL_PROVIDER=gmail
+GMAIL_USERNAME=your-account@gmail.com
+GMAIL_APP_PASSWORD=your-google-app-password
+```
+
+Ứng dụng tự chọn host, port, TLS và địa chỉ gửi: Mailpit dùng `mailpit:1025`, Gmail dùng `smtp.gmail.com:587` với STARTTLS. Chuyển lại `EMAIL_PROVIDER=mailpit` để dùng hộp thư demo; giữ nguyên thông tin Gmail cho lần sau. Chế độ Mailpit không dùng thông tin đăng nhập Gmail. Giá trị provider không hợp lệ hoặc thiếu thông tin Gmail khi chọn Gmail sẽ báo lỗi lúc khởi động.
+
+`GMAIL_APP_PASSWORD` là Google App Password, không phải mật khẩu đăng nhập Gmail. Bật xác minh hai bước rồi tạo tại [Google App Passwords](https://myaccount.google.com/apppasswords); tài khoản do tổ chức quản lý có thể bị hạn chế. `.env` được Git bỏ qua; không đưa mật khẩu vào `.env.example` hay README.
+
+Sau mỗi lần đổi provider, lưu `.env` rồi nhấp đúp `rebuild.cmd` để áp dụng cho cả Identity (khôi phục mật khẩu) và Notification (nhắc lịch), hoặc chạy:
+
+```powershell
+docker compose -f compose.yaml -f compose.ha.yaml up -d --build --wait --wait-timeout 240
+```
+
+Với Mailpit, xem thư tại `http://localhost:8025`. Với Gmail, đăng ký tài khoản bằng email nhận được rồi dùng quên mật khẩu để kiểm tra thư thật. Nhắc lịch phụ thuộc lịch học và tùy chọn trong Settings. Đăng ký mới yêu cầu xác minh mã email 6 số trước khi đăng nhập; chọn Student/Tutor ngay trong form đăng ký. Xem [luồng xác minh email](docs/08-account-experience/email-verification.md). Đặt `FRONTEND_ORIGIN` thành URL HTTPS công khai khi cho người khác dùng liên kết trong thư.
+
 ## Dữ liệu và tài khoản demo
+
+Chạy **`seed-data.cmd`** để nạp dữ liệu liên kết vào database qua API, tự chọn lịch không trùng và kiểm tra toàn vẹn. Xem [dữ liệu và kiểm chứng](docs/data-and-validation.md). Tài khoản mới phải hoàn thiện hồ sơ trước khi đặt lịch; các màn nghiệp vụ không dùng fixture thay dữ liệu thật.
+
+Đặt `EMAIL_PROVIDER=mailpit` và chạy lại `rebuild.cmd` trước khi seed tài khoản demo mới. Script seed tự lấy mã trong Mailpit để xác minh tài khoản, không bỏ qua kiểm tra email.
 
 Volume mới chưa có dữ liệu demo. Khi stack healthy, dùng Node.js 22 trở lên chạy theo thứ tự:
 
@@ -158,7 +201,11 @@ python scripts/verify-database-recovery.py
 
 ## Các nhánh
 
-- **[codex/scheduling-coursework](https://github.com/TrisMinh/TutorMatching/tree/codex/scheduling-coursework):** bản hiện tại dành cho đồ án Scheduling; giữ JWT, role/owner checks và nghiệp vụ, không cần triển khai PKI.
-- **[codex/advanced-service-security](https://github.com/TrisMinh/TutorMatching/tree/codex/advanced-service-security):** bản lưu riêng các lớp bảo mật nâng cao trước khi rút gọn.
+- **[feat/scheduling-coursework](https://github.com/TrisMinh/TutorMatching/tree/feat/scheduling-coursework):** bản hiện tại dành cho đồ án Scheduling; giữ JWT, role/owner checks và nghiệp vụ, không cần triển khai PKI.
+- **[feat/advanced-service-security](https://github.com/TrisMinh/TutorMatching/tree/feat/advanced-service-security):** bản lưu riêng các lớp bảo mật nâng cao trước khi rút gọn.
 
 Ba Scheduling giúp tiếp tục phục vụ qua replica còn khỏe; request đang chạy có thể lỗi và cần retry theo quy tắc idempotency. Trạng thái phục hồi dựa trên database/Redis dùng chung. Gateway, broker và datastore vẫn là single instance trong demo; đây không phải triển khai HA toàn hệ thống hoặc cấu hình production.
+
+### Chẩn đoán rebuild
+
+`GMAIL_USERNAME` chấp nhận email đầy đủ hoặc tên Gmail chưa có `@gmail.com` (ứng dụng tự bổ sung). `rebuild.cmd` kiểm tra cấu hình mail trước khi build, chờ mọi container khỏe và kiểm tra HTTP của website, Gateway, pgAdmin. Log mỗi lần chạy được lưu trong `.logs/rebuild-*.log` (không đưa lên Git). Lỗi sẽ giữ cửa sổ mở; xem thông báo và log trước khi chạy lại. Build thành công không xác nhận Google đã chấp nhận App Password; cần thử gửi thư riêng để kiểm tra điều đó.
