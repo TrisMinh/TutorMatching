@@ -1,3 +1,4 @@
+import {FriendlyEmptyState} from '../../shared/FriendlyEmptyState';
 import {prepareAvatar} from '../../shared/prepareAvatar';
 import {notifyAction} from '../../shared/notificationEvents';
 import {TutorProfileScreen,SelectScheduleScreen,ReviewBookingScreen,BookingConfirmedScreen,BookingDetailsScreen} from './BookingFlow';
@@ -136,7 +137,7 @@ export function TemplateDashboardReference({mode='student',active='dashboard'}:{
         </div>
         <div className="dashboard-week">
           <div className="dashboard-week__header"><h2>This week</h2><Link to={isTutor?'/tutor/requests':'/student/bookings'} viewTransition>View bookings</Link></div>
-          {loading ? <p className="dashboard-feedback" role="status">Loading your schedule…</p> : error ? <div className="dashboard-feedback" role="alert"><p>Unable to load your schedule.</p><Button onClick={() => void reload()} variant="secondary">Try again</Button></div> : upcomingCount === 0 ? <div className="dashboard-feedback"><h3>No upcoming lessons</h3><p>Find a tutor and book a time that works for you.</p><Link className="student-primary-link" to="/student/find-tutors">Find a tutor</Link></div> : null}
+          {loading ? <p className="dashboard-feedback" role="status">Loading your schedule…</p> : error ? <div className="dashboard-feedback" role="alert"><p>Unable to load your schedule.</p><Button onClick={() => void reload()} variant="secondary">Try again</Button></div> : upcomingCount === 0 ? <FriendlyEmptyState compact kind="calendar" title="No upcoming lessons" description="Make a little room for learning. Find a tutor and choose your first lesson." action={{label:'Find a tutor',to:'/student/find-tutors'}}/> : null}
           <div className="dashboard-week__days">
             {weekdays.map((day, dayIndex) => (
               <div className="dashboard-week__day" key={day}>
@@ -307,7 +308,7 @@ export function FindTutorsScreen() {
       <div className="tutor-results-title"><h2>Tutors matching your search</h2><div className="course-view-toolbar tutor-view-toolbar"><span>Grid view</span><div role="group" aria-label="Tutor grid size">{(['small','medium','large'] as const).map((size,index)=><button key={size} type="button" aria-label={`${size} tutor cards`} aria-pressed={gridSize===size} title={`${size} cards`} onClick={()=>{setGridSize(size);localStorage.setItem('tutormatching.tutorGrid',size);}}><svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor" aria-hidden="true">{Array.from({length:3-index},(_,col)=>Array.from({length:2},(_,row)=><rect key={`${col}-${row}`} x={1+col*(16/(3-index))} y={2+row*8} width={16/(3-index)-2} height="6" rx="1"/>))}</svg></button>)}</div></div></div>
       <span aria-live="polite" className="sr-only">{loading ? 'Loading tutors' : `${tutors.length} tutors found`}</span>
       {tutorError ? <section role="alert"><p>Unable to load tutors.</p><Button onClick={() => void reloadTutors()}>Try again</Button></section> : null}
-      {!loading && !tutorError && !tutors.length ? <p>No tutors match this search.</p> : null}
+      {!loading && !tutorError && !tutors.length ? <FriendlyEmptyState kind="search" title="No tutors match this search." description="A different subject or a broader search might lead you to your next great tutor." action={{label:'Clear filters',onClick:()=>{setSubjectFilter('');setAvailableToday(false);setQuery('');setSubmittedQuery('');}}}/> : null}
       <div className={`tutor-grid tutor-grid--${gridSize}`} key={gridSize}>
         {tutors.map((tutor) => (
           <article className="tutor-card" key={tutor.id}>
@@ -327,14 +328,14 @@ export function FindTutorsScreen() {
 
 export function BookingsScreen() {
   const loadBookings = useCallback(() => gatewayClient.listBookings(), []);
-  const { data: remoteBookings } = useGatewayResource<Booking[] | null>(loadBookings, null);
+  const { data: remoteBookings,loading,error,reload } = useGatewayResource<Booking[] | null>(loadBookings, null);
   const bookings: BookingCard[] = remoteBookings ? remoteBookings.map(formatBooking) : [];
   const [activeTab, setActiveTab] = useState('Upcoming');
   const visibleBookings = bookings.filter((booking) => activeTab === 'Upcoming' ? !['Completed','Cancelled'].includes(booking.status) : booking.status === activeTab);
   return (
     <AppShell active="bookings" contentClassName="bookings" title="My bookings">
       <div className="booking-tabs" role="tablist">{['Upcoming','Completed','Cancelled'].map(tab=><button data-status={tab} aria-selected={activeTab===tab} className={activeTab===tab?'is-active':''} key={tab} onClick={()=>setActiveTab(tab)} role="tab" type="button">{tab}</button>)}</div>
-      <div className="booking-list">{visibleBookings.length ? visibleBookings.map((booking)=><article className="student-card booking-item" key={booking.id ?? `${booking.day}-${booking.title}`}><div className="booking-date"><strong>{booking.day}</strong><span>{booking.month}</span></div><div className="booking-item__content"><h2>{booking.title}</h2><p>{booking.time} • {booking.format}</p></div><span className="booking-status" data-status={booking.status}>{booking.status}</span><Link className="student-primary-link" to={booking.id ? `/student/bookings/${booking.id}` : '/student/bookings/TM-20261118-1042'} viewTransition>{booking.action}</Link></article>) : <p className="booking-empty">No {activeTab.toLowerCase()} bookings.</p>}</div>
+      <div className="booking-list">{loading?<p role="status">Loading your bookings…</p>:error?<section className="student-card" role="alert"><h2>Your bookings could not be loaded</h2><p>Try again to see your saved lessons.</p><Button onClick={()=>void reload()}>Try again</Button></section>:visibleBookings.length ? visibleBookings.map((booking)=><article className="student-card booking-item" key={booking.id ?? `${booking.day}-${booking.title}`}><div className="booking-date"><strong>{booking.day}</strong><span>{booking.month}</span></div><div className="booking-item__content"><h2>{booking.title}</h2><p>{booking.time} • {booking.format}</p></div><span className="booking-status" data-status={booking.status}>{booking.status}</span><Link className="student-primary-link" to={booking.id ? `/student/bookings/${booking.id}` : '/student/bookings/TM-20261118-1042'} viewTransition>{booking.action}</Link></article>) : <FriendlyEmptyState kind="calendar" title={`No ${activeTab.toLowerCase()} bookings.`} description={activeTab==='Upcoming'?'Your next learning adventure is waiting. Choose a tutor and a time that suits you.':'Bookings in this category will appear here. Your upcoming lessons are in the Upcoming tab.'} action={activeTab==='Upcoming'?{label:'Find a tutor',to:'/student/find-tutors'}:undefined}/>}</div>
     </AppShell>
   );
 }
@@ -344,7 +345,7 @@ export function NotificationsScreen() {
  const {data,loading,error,reload,setData}=useGatewayResource(load,null);
  const [failure,setFailure]=useState('');
  async function read(item:NotificationItem){if(item.status!=='Unread')return;try{await gatewayClient.markNotificationRead(item.id);setData(value=>value?{...value,items:value.items.map(n=>n.id===item.id?{...n,status:'Read'}:n)}:value);}catch(reason){setFailure(reason instanceof Error?reason.message:'Unable to update notification.');}}
- return <AppShell active="notifications" contentClassName="notifications" title="Notifications">{loading?<p role="status">Loading notifications…</p>:error?<section role="alert"><p>Unable to load notifications.</p><Button onClick={()=>void reload()}>Try again</Button></section>:<div className="notification-list">{data?.items.map(item=><article className={`student-card notification-item notification-with-details ${item.status==='Unread'?'is-unread':''}`} key={item.id}><Link onClick={()=>void read(item)} to={item.courseId?`/student/courses/${encodeURIComponent(item.courseId)}`:item.bookingId?`/student/bookings/${item.bookingId}`:'/student/notifications'} className="notification-item-link"><h2>{notificationTitle(item)}</h2><NotificationDetails item={item}/></Link><time>{new Date(item.createdAtUtc).toLocaleString('en-GB',{timeZone:'Asia/Ho_Chi_Minh'})}</time></article>)}{!data?.items.length&&<p>No notifications yet.</p>}</div>}{failure&&<p role="alert">{failure}</p>}</AppShell>;
+ return <AppShell active="notifications" contentClassName="notifications" title="Notifications">{loading?<p role="status">Loading notifications…</p>:error?<section role="alert"><p>Unable to load notifications.</p><Button onClick={()=>void reload()}>Try again</Button></section>:<div className="notification-list">{data?.items.map(item=><article className={`student-card notification-item notification-with-details ${item.status==='Unread'?'is-unread':''}`} key={item.id}><Link onClick={()=>void read(item)} to={item.courseId?`/student/courses/${encodeURIComponent(item.courseId)}`:item.bookingId?`/student/bookings/${item.bookingId}`:'/student/notifications'} className="notification-item-link"><h2>{notificationTitle(item)}</h2><NotificationDetails item={item}/></Link><time>{new Date(item.createdAtUtc).toLocaleString('en-GB',{timeZone:'Asia/Ho_Chi_Minh'})}</time></article>)}{!data?.items.length&&<FriendlyEmptyState kind="bell" title="No notifications yet." description="You’re all caught up. Updates about your bookings and courses will appear here." action={{label:'Explore courses',to:'/student/courses?view=discover'}}/>}</div>}{failure&&<p role="alert">{failure}</p>}</AppShell>;
 }
 
 export function StudentProfileScreen() {
