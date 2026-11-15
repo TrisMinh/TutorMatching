@@ -1,3 +1,4 @@
+import {TeddyCompanion} from './TeddyCompanion';
 import {FriendlyEmptyState} from './FriendlyEmptyState';
 import {CourseLifecycleActions,CourseStatus,courseState} from './CourseLifecycleActions';
 import { useCallback, useEffect, useState } from 'react';
@@ -32,7 +33,7 @@ export function MyCourses({mode='student'}:{mode?:'student'|'tutor'}) {
     {!current&&<header className="my-courses-heading"><div><h2>{tutor?'Your teaching courses':discover?'A new way to keep learning':'Your enrolled courses'}</h2><p>{tutor?'Manage your courses and their session schedules.':discover?'Choose a course, review its schedule and register when you are ready.':'All your courses and session schedules, together in one place.'}</p></div>{!tutor&&<Link className="course-back-button" to={discover?"/student/courses":"/student/courses?view=discover"}>{discover?"My courses":"Browse courses"}</Link>}</header>}
     {discover?<CourseDiscovery/>:loading?<p role="status">Loading your courses…</p>:error?<section className="student-card course-discovery-feedback" role="alert"><h2>Your courses could not be loaded</h2><p>Please try again to see your registrations.</p><button className="course-discovery-retry" onClick={()=>void reload()}>Try again</button></section>:courses.length===0?<>
       <section className="student-card my-courses-empty" aria-labelledby="my-courses-empty-title">
-        <div className="my-courses-empty-icon" aria-hidden="true"><svg width="44" height="44" viewBox="0 0 48 48" fill="none"><path d="M24 13c-5-4-11-5-18-3v25c7-2 13-1 18 3m0-25c5-4 11-5 18-3v25c-7-2-13-1-18 3m0-25v25" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"/><path d="M12 17c2-.3 4 0 6 1m-6 7c2-.3 4 0 6 1m12-8c2-1 4-1.3 6-1m-6 9c2-1 4-1.3 6-1" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg></div>
+        <TeddyCompanion/>
         <h2 id="my-courses-empty-title">{tutor?'Your teaching library starts here':'Your next learning journey starts here'}</h2>
         <p>{tutor?'Courses assigned to your tutor account will appear here with their session schedules.':'You haven’t enrolled in a course yet. Explore a subject you love — your courses and upcoming sessions will appear here once you register.'}</p>
         {!tutor&&<div className="my-courses-empty-actions"><Link className="my-courses-primary" to="/student/courses?view=discover">Find a course <span aria-hidden="true">→</span></Link><Link className="my-courses-secondary" to="/student/find-tutors">Find a tutor</Link></div>}

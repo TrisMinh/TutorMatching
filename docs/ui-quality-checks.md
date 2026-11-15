@@ -33,3 +33,10 @@ npm run test:e2e:live -- friendly-empty-states.spec.ts --workers=1
 `booking-confirmation-layout.spec.ts` mở booking thật ở 1920/768/390 px, kiểm tra padding tiêu đề tối thiểu 20 px, khung tối đa 1000 px, khoảng đệm nội dung, nút tối thiểu 44 px và cách nhau ít nhất 12 px. Có ảnh chụp riêng `.logs/booking-details-*.png` để xem lại bố cục. Trạng thái đã hủy và hết hạn hủy được kiểm tra bằng phản hồi trình duyệt giả lập, không hủy booking thật.
 
 Các kiểm tra này chỉ xác nhận các trạng thái/kích thước đã nêu, không bảo đảm mọi trang hoặc mọi nội dung đều không có lỗi giao diện.
+
+
+## Gấu bông trang trí có tiết chế
+
+Asset `public/assets/illustrations/teddy-reading.webp` được tạo bằng ImageGen, nền trong suốt, bản web 560×560 px khoảng 55 KB. Chỉ hiển thị một hình (150–190 px) khi thư viện khóa học hoặc tab lịch sắp tới trống; không lặp cạnh ảnh khác, không hiệu ứng chuyển động, không đặt vào form/chi tiết booking. Các trạng thái trống khác tiếp tục dùng icon SVG nhỏ. Hình trang trí có alt rỗng và aria-hidden, kích thước khai báo sẵn để tránh nhảy bố cục.
+
+Kiểm tra trình duyệt xác nhận ảnh tải được, tối đa một gấu mỗi màn, kích thước desktop/mobile, không xuất hiện ở notification/search/form và không tràn ngang.
