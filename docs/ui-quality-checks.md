@@ -40,3 +40,10 @@ Các kiểm tra này chỉ xác nhận các trạng thái/kích thước đã n�
 Asset `public/assets/illustrations/teddy-reading.webp` được tạo bằng ImageGen, nền trong suốt, bản web 560×560 px khoảng 55 KB. Chỉ hiển thị một hình (150–190 px) khi thư viện khóa học hoặc tab lịch sắp tới trống; không lặp cạnh ảnh khác, không hiệu ứng chuyển động, không đặt vào form/chi tiết booking. Các trạng thái trống khác tiếp tục dùng icon SVG nhỏ. Hình trang trí có alt rỗng và aria-hidden, kích thước khai báo sẵn để tránh nhảy bố cục.
 
 Kiểm tra trình duyệt xác nhận ảnh tải được, tối đa một gấu mỗi màn, kích thước desktop/mobile, không xuất hiện ở notification/search/form và không tràn ngang.
+
+
+## Hồ sơ gia sư có nhiều khoảng lịch
+
+Đã sửa lỗi CSS grid kéo giãn phần giới thiệu theo danh sách lịch dài. `tutor-profile.css` giới hạn bố cục trong 1200 px, tách cột chính (giới thiệu/khóa học) khỏi cột lịch, căn đầu mỗi cột. Lịch tương lai được sắp tăng dần, mặc định hiện 4 mục; mở rộng vẫn nằm trong vùng cuộn tối đa 300 px. Khối khóa học có padding và các thẻ riêng. Trên điện thoại, thứ tự là hồ sơ → giới thiệu → lịch → khóa học, hai nút đặt lịch/nhắn tin đều hiển thị.
+
+`tutor-profile-layout.spec.ts` kiểm tra đúng hồ sơ Bui Phuong Thao có 21 khoảng lịch, ba kích thước 1920/768/390 px, chiều cao khối giới thiệu/lịch, khoảng cách giữa giới thiệu và khóa học, thứ tự ngày, mở/thu danh sách và không tràn ngang. Ảnh ở `.logs/tutor-profile-fixed-*.png`.
