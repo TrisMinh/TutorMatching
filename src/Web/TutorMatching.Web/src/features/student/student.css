@@ -1037,3 +1037,48 @@
  .booking-success-actions { flex-direction:column; }
  .booking-success-actions a { width:100%; }
 }
+
+/* Student booking details: scoped structure and spacing for every content state. */
+.lesson-detail-card { width:100%; max-width:1000px; margin:12px auto 24px; padding:32px; box-sizing:border-box; }
+.lesson-detail-header { display:flex; align-items:center; justify-content:space-between; gap:24px; padding-bottom:28px; border-bottom:1px solid var(--color-border); }
+.lesson-detail-header > div { min-width:0; }
+.lesson-detail-back { display:inline-flex; align-items:center; min-height:44px; margin-bottom:8px; color:var(--color-primary); font:13px var(--font-medium); text-decoration:none; }
+.lesson-detail-eyebrow { display:block; margin-bottom:8px; color:var(--color-muted); font:11px/1.5 var(--font-semibold); text-transform:uppercase; letter-spacing:1.1px; }
+.lesson-detail-header h2 { margin:0 0 14px; font:25px/1.4 var(--font-semibold); letter-spacing:-.5px; overflow-wrap:anywhere; }
+.lesson-detail-header .booking-status { display:inline-flex; margin:0; }
+.lesson-detail-header .friendly-empty-art { width:170px; height:113px; margin:0; }
+.lesson-detail-facts { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); margin:28px 0; border:1px solid var(--color-border); border-radius:14px; overflow:hidden; background:#fafcff; }
+.lesson-detail-fact { display:flex; gap:14px; align-items:center; min-width:0; padding:22px; }
+.lesson-detail-fact:nth-child(-n+2) { border-bottom:1px solid var(--color-border); }
+.lesson-detail-fact:nth-child(odd) { border-right:1px solid var(--color-border); }
+.lesson-detail-fact dt { margin:0 0 6px; color:var(--color-muted); font-size:12px; }
+.lesson-detail-fact dd { margin:0; font:14px/1.6 var(--font-medium); overflow-wrap:anywhere; }
+.lesson-detail-policy { display:flex; gap:14px; padding:20px; border:1px solid #f0e3c4; border-radius:12px; background:#fffaf0; }
+.lesson-detail-policy-icon { display:grid; place-items:center; width:36px; height:36px; flex:none; border-radius:10px; background:#fff0ce; color:#9d752e; }
+.lesson-detail-policy h3 { margin:0 0 6px; font:14px/1.5 var(--font-semibold); }
+.lesson-detail-policy p { margin:0; color:var(--color-muted); font-size:13px; line-height:1.8; }
+.lesson-detail-policy strong { color:var(--color-ink); font-weight:500; }
+.lesson-detail-footer { display:flex; justify-content:space-between; align-items:center; gap:24px; margin-top:28px; padding-top:24px; border-top:1px solid var(--color-border); }
+.lesson-detail-reference { display:grid; gap:6px; min-width:0; }
+.lesson-detail-reference span { font-size:11px; color:var(--color-muted); }
+.lesson-detail-reference code { font:11px/1.6 var(--font-regular); color:var(--color-muted); overflow-wrap:anywhere; }
+.lesson-detail-actions { display:flex; align-items:center; gap:12px; flex-shrink:0; }
+.lesson-detail-actions a { display:inline-flex; justify-content:center; align-items:center; min-height:48px; padding:12px 20px; border:1px solid var(--color-border); border-radius:10px; color:var(--color-primary); background:white; font:14px/1.5 var(--font-semibold); text-decoration:none; box-sizing:border-box; }
+.lesson-detail-actions .tm-button { min-height:48px; }
+.lesson-detail-actions a:hover { background:#f0f6ff; }
+.lesson-detail-card a:focus-visible { outline:2px solid var(--color-primary); outline-offset:4px; }
+.lesson-detail-error { margin:20px 0 0; color:var(--color-danger,#c73b50); font-size:14px; }
+@media(max-width:1100px) { .lesson-detail-footer { flex-direction:column; align-items:stretch; }.lesson-detail-actions { justify-content:flex-end; } }
+@media(max-width:600px) {
+ .lesson-detail-card { margin:0; padding:20px; }
+ .lesson-detail-header { gap:12px; align-items:flex-start; padding-bottom:24px; }
+ .lesson-detail-header h2 { font-size:21px; }
+ .lesson-detail-header .friendly-empty-art { width:76px; height:60px; margin-top:34px; }
+ .lesson-detail-facts { grid-template-columns:minmax(0,1fr); margin:24px 0; }
+ .lesson-detail-fact { padding:16px; border:0 !important; }
+ .lesson-detail-fact + .lesson-detail-fact { border-top:1px solid var(--color-border) !important; }
+ .lesson-detail-policy { padding:16px; gap:10px; }
+ .lesson-detail-footer { margin-top:24px; gap:20px; }
+ .lesson-detail-actions { flex-direction:column-reverse; align-items:stretch; }
+ .lesson-detail-actions a,.lesson-detail-actions .tm-button { width:100%; }
+}
