@@ -1,0 +1,4 @@
+.teddy-companion { display:block; flex:none; width:184px; height:184px; max-width:100%; margin:0 auto 16px; object-fit:contain; pointer-events:none; user-select:none; }
+.friendly-empty-state .teddy-companion { width:174px; height:174px; }
+.my-courses-empty .teddy-companion { width:190px; height:190px; margin-bottom:20px; }
+@media(max-width:600px) { .teddy-companion,.friendly-empty-state .teddy-companion,.my-courses-empty .teddy-companion { width:150px; height:150px; margin-bottom:16px; } }

@@ -22,7 +22,12 @@ for(const role of ['Student','Tutor'] as const){
    await page.setViewportSize({width,height:900});
    for(const path of paths){
     await page.goto(path);await expect(page.locator('.friendly-empty-state').first()).toBeVisible();
-    await expect(page.locator('.friendly-empty-art').first()).toBeVisible();
+    await expect(page.locator('.friendly-empty-art,.teddy-companion').first()).toBeVisible();
+    if(path.endsWith('/bookings')||path.endsWith('/requests')){
+     const teddy=page.locator('.teddy-companion');await expect(teddy).toHaveCount(1);
+     await teddy.evaluate(async element=>{await(element as HTMLImageElement).decode();});
+     const size=await teddy.boundingBox();expect(size!.width).toBeLessThanOrEqual(190);
+    }else await expect(page.locator('.teddy-companion')).toHaveCount(0);
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBeTruthy();
     for(const button of await page.locator('.friendly-empty-action').all()){
      const box=await button.boundingBox();expect(box!.height).toBeGreaterThanOrEqual(44);expect(box!.x).toBeGreaterThanOrEqual(0);expect(box!.x+box!.width).toBeLessThanOrEqual(width+1);
@@ -30,6 +35,8 @@ for(const role of ['Student','Tutor'] as const){
     if(path.endsWith('/notifications')||path.endsWith('/bookings')||path.endsWith('/availability'))await page.screenshot({path:'../../../.logs/empty-'+role.toLowerCase()+'-'+path.split('/').at(-1)+'-'+width+'.png',fullPage:true});
    }
   }
+  await page.goto(role==='Student'?'/student/profile':'/tutor/onboarding');
+  await expect(page.locator('.teddy-companion')).toHaveCount(0);
   if(role==='Student'){
    await page.goto('/student/bookings');await page.getByRole('link',{name:'Find a tutor',exact:true}).last().click();await expect(page).toHaveURL(/student\/find-tutors$/);
    await page.route('**/api/v1/bookings',route=>route.fulfill({status:503,json:{title:'Temporarily unavailable'}}));

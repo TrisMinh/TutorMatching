@@ -1,3 +1,4 @@
+import {TeddyCompanion} from './TeddyCompanion';
 import type {ReactNode} from 'react';
 import {MotionLink} from './MotionLink';
 import './friendly-empty-state.css';
@@ -11,9 +12,9 @@ export function FriendlyIllustration({kind='calendar'}:{kind?:Kind}){
   <g transform={kind==='search'?'translate(-10 -8)':''}><path d="M104 83v4m30-4v4" stroke="#294c79" strokeWidth="4" strokeLinecap="round"/><path d="M112 96q7 8 14 0" stroke="#294c79" strokeWidth="2.6" strokeLinecap="round"/><ellipse cx="97" cy="94" rx="5" ry="3" fill="#ffc4be"/><ellipse cx="141" cy="94" rx="5" ry="3" fill="#ffc4be"/></g>
  </svg>;
 }
-export function FriendlyEmptyState({kind='calendar',title,description,action,secondary,compact=false}:{kind?:Kind;title:string;description:string;action?:{label:string;to?:string;onClick?:()=>void};secondary?:ReactNode;compact?:boolean}){
+export function FriendlyEmptyState({kind='calendar',title,description,action,secondary,compact=false,illustration='icon'}:{kind?:Kind;title:string;description:string;action?:{label:string;to?:string;onClick?:()=>void};secondary?:ReactNode;compact?:boolean;illustration?:'icon'|'teddy'}){
  return <section className={'friendly-empty-state'+(compact?' friendly-empty-state--compact':'')}>
-  <FriendlyIllustration kind={kind}/><h3>{title}</h3><p>{description}</p>
+  {illustration==='teddy'?<TeddyCompanion/>:<FriendlyIllustration kind={kind}/>}<h3>{title}</h3><p>{description}</p>
   {action||secondary?<div className="friendly-empty-actions">{action?.to?<MotionLink className="friendly-empty-action" to={action.to}>{action.label}<span aria-hidden="true">→</span></MotionLink>:action?<button className="friendly-empty-action" type="button" onClick={action.onClick}>{action.label}</button>:null}{secondary}</div>:null}
  </section>;
 }

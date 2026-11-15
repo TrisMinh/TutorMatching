@@ -14,6 +14,10 @@ test('empty course library and discovery fit desktop, tablet and phone',async({p
   await page.setViewportSize({width,height:1000});await page.goto('/student/courses');
   await expect(page.getByRole('heading',{name:'Your next learning journey starts here'})).toBeVisible();
   await expect(page.locator('.course-discovery-card').first()).toBeVisible();
+  const teddy=page.locator('.teddy-companion');await expect(teddy).toHaveCount(1);
+  await teddy.evaluate(async element=>{await(element as HTMLImageElement).decode();});
+  const teddyBox=await teddy.boundingBox();expect(teddyBox!.width).toBeLessThanOrEqual(190);
+  if(width===390)expect(teddyBox!.width).toBeLessThanOrEqual(150);
   for(const link of await page.locator('.my-courses-empty-actions a').all()){
    const box=await link.boundingBox();expect(box!.height).toBeGreaterThanOrEqual(44);expect(box!.x).toBeGreaterThanOrEqual(0);expect(box!.x+box!.width).toBeLessThanOrEqual(width);
   }
