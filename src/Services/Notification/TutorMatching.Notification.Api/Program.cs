@@ -1,3 +1,4 @@
+using TutorMatching.BuildingBlocks.Email;
 using TutorMatching.BuildingBlocks.Security;
 using Microsoft.EntityFrameworkCore;
 using TutorMatching.BuildingBlocks.Hosting;
@@ -6,6 +7,7 @@ using TutorMatching.Notification.Api.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args)
     .AddTutorMatchingApi("notification");
+_ = SmtpSettings.FromConfiguration(builder.Configuration);
 builder.Services.AddDbContext<NotificationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("NotificationDb")
         ?? "Host=localhost;Port=54325;Database=notification_db;Username=notification_app;Password=notification_dev"));

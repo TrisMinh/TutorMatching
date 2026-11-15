@@ -1,0 +1,14 @@
+$kind: http-request
+name: Read student verification delivery
+order: 2100
+url: '{{mailpitBaseUrl}}/api/v1/search?query=to%3Astudent-{{runId}}@example.test'
+method: GET
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('verification email delivered to Mailpit', () => pm.response.to.have.status(200));
+      const message = pm.response.json().messages.find(m => m.Subject === 'Verify your TutorMatching email');
+      pm.expect(message).to.exist;
+      pm.collectionVariables.set('studentVerificationMessageId', message.ID);

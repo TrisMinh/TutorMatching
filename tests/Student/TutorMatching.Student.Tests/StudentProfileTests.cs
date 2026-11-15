@@ -5,6 +5,18 @@ namespace TutorMatching.Student.Tests;
 public sealed class StudentProfileTests
 {
     [Fact]
+    public void RegistrationNameIsEnoughForAUsableProfile()
+    {
+        var profile = StudentProfile.Create(Guid.NewGuid(), "Registered Student", EducationLevel.Unspecified, "", "Asia/Ho_Chi_Minh", DateTimeOffset.UtcNow);
+        Assert.Equal("Registered Student", profile.DisplayName);
+        Assert.Equal(EducationLevel.Unspecified, profile.EducationLevel);
+        Assert.Empty(profile.LearningGoal);
+        Assert.Empty(profile.Interests);
+        profile.Update(profile.DisplayName, EducationLevel.Unspecified, "", profile.Timezone, DateTimeOffset.UtcNow);
+        Assert.Equal(2, profile.Version);
+    }
+
+    [Fact]
     public void ReplaceInterestsRejectsDuplicateSubject()
     {
         var profile = StudentProfile.Create(

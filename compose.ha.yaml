@@ -39,13 +39,13 @@ services:
     <<: *single-instance
     environment:
       <<: *replica-environment
-      ConnectionStrings__IdentityDb: Host=identity-db;Port=5432;Database=identity_db;Username=identity_app;Password=${POSTGRES_IDENTITY_PASSWORD:-identity_dev};Maximum Pool Size=20;Timeout=5;Command Timeout=20
+      ConnectionStrings__IdentityDb: Host=identity-db;Port=5432;Database=identity_db;Username=identity_app;Password=${LOCAL_ADMIN_PASSWORD:-change-me-local-password};Maximum Pool Size=20;Timeout=5;Command Timeout=20
 
   tutor-service:
     <<: *single-instance
     environment:
       <<: *replica-environment
-      ConnectionStrings__TutorDb: Host=tutor-db;Port=5432;Database=tutor_db;Username=tutor_app;Password=${POSTGRES_TUTOR_PASSWORD:-tutor_dev};Maximum Pool Size=20;Timeout=5;Command Timeout=20
+      ConnectionStrings__TutorDb: Host=tutor-db;Port=5432;Database=tutor_db;Username=tutor_app;Password=${LOCAL_ADMIN_PASSWORD:-change-me-local-password};Maximum Pool Size=20;Timeout=5;Command Timeout=20
       Services__Student: http://service-lb:8083
       Services__Scheduling: http://service-lb:8084
 
@@ -53,7 +53,7 @@ services:
     <<: *single-instance
     environment:
       <<: *replica-environment
-      ConnectionStrings__StudentDb: Host=student-db;Port=5432;Database=student_db;Username=student_app;Password=${POSTGRES_STUDENT_PASSWORD:-student_dev};Maximum Pool Size=20;Timeout=5;Command Timeout=20
+      ConnectionStrings__StudentDb: Host=student-db;Port=5432;Database=student_db;Username=student_app;Password=${LOCAL_ADMIN_PASSWORD:-change-me-local-password};Maximum Pool Size=20;Timeout=5;Command Timeout=20
 
   scheduling-service:
     <<: *single-instance
@@ -61,7 +61,7 @@ services:
       replicas: 3
     environment:
       <<: *replica-environment
-      ConnectionStrings__SchedulingDb: Host=scheduling-db;Port=5432;Database=scheduling_db;Username=scheduling_app;Password=${POSTGRES_SCHEDULING_PASSWORD:-scheduling_dev};Maximum Pool Size=20;Timeout=5;Command Timeout=20
+      ConnectionStrings__SchedulingDb: Host=scheduling-db;Port=5432;Database=scheduling_db;Username=scheduling_app;Password=${LOCAL_ADMIN_PASSWORD:-change-me-local-password};Maximum Pool Size=20;Timeout=5;Command Timeout=20
       Services__Tutor: http://service-lb:8082
       Services__Student: http://service-lb:8083
 
@@ -69,7 +69,7 @@ services:
     <<: *single-instance
     environment:
       <<: *replica-environment
-      ConnectionStrings__NotificationDb: Host=notification-db;Port=5432;Database=notification_db;Username=notification_app;Password=${POSTGRES_NOTIFICATION_PASSWORD:-notification_dev};Maximum Pool Size=20;Timeout=5;Command Timeout=20
+      ConnectionStrings__NotificationDb: Host=notification-db;Port=5432;Database=notification_db;Username=notification_app;Password=${LOCAL_ADMIN_PASSWORD:-change-me-local-password};Maximum Pool Size=20;Timeout=5;Command Timeout=20
 
   web:
     volumes:

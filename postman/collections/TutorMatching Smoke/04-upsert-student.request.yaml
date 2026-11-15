@@ -8,7 +8,7 @@ headers:
 body:
   type: json
   content: |-
-    {"displayName":"Smoke Student","educationLevel":3,"learningGoal":"Validate the full booking flow","timezone":"Asia/Ho_Chi_Minh"}
+    {"displayName":"Smoke Student"}
 scripts:
   - type: afterResponse
     code: |-

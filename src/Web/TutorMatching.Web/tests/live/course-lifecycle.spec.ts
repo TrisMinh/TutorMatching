@@ -1,7 +1,8 @@
+import {verifyEmail} from './verifyEmail';
 import {test,expect} from '@playwright/test';
 test('course owner manages registration, student withdraws, cancelled course leaves calendar and sends notice',async({browser,request})=>{
  const stamp=Date.now(),password='LifecycleUI!2026',id=`lifecycle-ui-${stamp}`;
- async function account(role:'Student'|'Tutor',suffix:string){const email=`lifecycle.ui.${stamp}.${suffix}@example.com`;expect((await request.post('http://localhost:8080/api/v1/auth/register',{data:{email,password,role}})).status()).toBe(201);return {...await (await request.post('http://localhost:8080/api/v1/auth/login',{data:{email,password}})).json(),role,email};}
+ async function account(role:'Student'|'Tutor',suffix:string){const email=`lifecycle.ui.${stamp}.${suffix}@example.com`;expect((await request.post('http://localhost:8080/api/v1/auth/register',{data:{email,password,role}})).status()).toBe(201);await verifyEmail(request,email);return {...await (await request.post('http://localhost:8080/api/v1/auth/login',{data:{email,password}})).json(),role,email};}
  const teacher=await account('Tutor','teacher'),student=await account('Student','student');
  const auth=(session:{accessToken:string})=>({Authorization:`Bearer ${session.accessToken}`});
  expect((await request.put('http://localhost:8080/api/v1/tutors/me',{headers:auth(teacher),data:{displayName:'Lifecycle UI tutor',bio:'Isolated lifecycle UI fixture',experienceYears:3}})).status()).toBe(200);

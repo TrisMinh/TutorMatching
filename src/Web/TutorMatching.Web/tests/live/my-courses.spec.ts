@@ -1,8 +1,9 @@
+import {verifyEmail} from './verifyEmail';
 import { test,expect } from '@playwright/test';
 test('new enrollment appears in student library and owning tutor count',async({page,request})=>{
  const email=`course.e2e.${Date.now()}@example.com`;
  const password='TutorDemo!2026';
- expect((await request.post('http://localhost:8080/api/v1/auth/register',{data:{email,password,role:'Student'}})).ok()).toBeTruthy();
+ expect((await request.post('http://localhost:8080/api/v1/auth/register',{data:{email,password,role:'Student'}})).ok()).toBeTruthy();await verifyEmail(request,email);
  const auth=await request.post('http://localhost:8080/api/v1/auth/login',{data:{email,password}});
  const session={...await auth.json(),role:'Student'};
  await page.addInitScript(value=>localStorage.setItem('tutormatching.auth.session',JSON.stringify(value)),session);

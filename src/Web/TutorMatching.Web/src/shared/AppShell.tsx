@@ -83,13 +83,13 @@ function AppShellFrame({ active, children, contentClassName = '', mode = 'studen
   const mobileNavigation = isTutor ? tutorMobileItems : mobileItems;
   const [tutorAccount,setTutorAccount]=useState<{displayName:string;avatarUrl?:string|null}>();
   useEffect(()=>{
-    if(!isTutor)return;let cancelled=false;
-    const refresh=()=>{void gatewayClient.getMyTutorProfile().then(profile=>{if(!cancelled)setTutorAccount(profile);}).catch(()=>{});};
-    refresh();window.addEventListener('tutormatching:tutor-profile-updated',refresh);
-    return()=>{cancelled=true;window.removeEventListener('tutormatching:tutor-profile-updated',refresh);};
+    let cancelled=false;
+    const refresh=()=>{void (isTutor?gatewayClient.getMyTutorProfile():gatewayClient.getStudentProfile()).then(profile=>{if(!cancelled)setTutorAccount(profile);}).catch(()=>{});};
+    refresh();window.addEventListener('tutormatching:profile-updated',refresh);
+    return()=>{cancelled=true;window.removeEventListener('tutormatching:profile-updated',refresh);};
   },[isTutor]);
-  const accountName = isTutor ? tutorAccount?.displayName??'Tutor' : 'Minh';
-  const accountImage = isTutor ? tutorAccount?.avatarUrl||'/assets/figma/student-tutor-3.jpg' : '/assets/figma/student-tutor-1.jpg';
+  const accountName = tutorAccount?.displayName ?? (isTutor?'Tutor':'Student');
+  const accountImage = tutorAccount?.avatarUrl || '/assets/figma/default-avatar.svg';
 
   async function logout() {
     setLoggingOut(true);
@@ -132,7 +132,7 @@ function AppShellFrame({ active, children, contentClassName = '', mode = 'studen
             <NotificationDropdown mode={mode}/>
             <strong>{accountName}</strong>
             <MotionLink aria-label="Open my profile" to={isTutor ? '/tutor/public-profile' : '/student/profile'}><img className="student-topbar__avatar" alt={accountName} src={accountImage} /></MotionLink>
-            {quickPanel === 'messages' ? <div className="student-quick-panel" role="dialog" aria-label="Recent messages"><strong>Recent messages</strong><p>No unread messages right now.</p><MotionLink to={isTutor ? '/tutor/requests' : '/student/bookings'}>View conversations</MotionLink></div> : null}
+            {quickPanel === 'messages' ? <div className="student-quick-panel" role="dialog" aria-label="Recent messages"><strong>Messaging</strong><p>Direct messaging is not available. View your bookings for lesson details.</p><MotionLink to={isTutor ? '/tutor/requests' : '/student/bookings'}>View bookings</MotionLink></div> : null}
           </div>
         </header>
         <CourseTicker mode={mode}/>

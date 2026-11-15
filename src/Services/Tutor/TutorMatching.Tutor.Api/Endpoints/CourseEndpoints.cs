@@ -60,11 +60,20 @@ public static class CourseEndpoints
                 Sessions=c.Sessions.OrderBy(s=>s.StartAtUtc).Select(s=>new{s.Id,s.StartAtUtc,s.EndAtUtc})
             }).ToListAsync(ct));
         }).RequireAuthorization(p=>p.RequireRole("Student","Tutor"));
-        group.MapGet("/", async (TutorDbContext db, CancellationToken ct) => Results.Ok(await db.Courses.AsNoTracking().Where(c=>c.Status!="Cancelled").Select(c => new {
-            c.Id,c.Title,c.TutorId,c.Image,c.Category,c.Description,c.Capacity,c.Status,c.Version,c.CancellationReason,c.CancelledAtUtc,
-            Instructor=db.TutorProfiles.Where(t=>t.Id==c.TutorId).Select(t=>t.DisplayName).First(),
-            Enrolled=c.Enrollments.Count(e=>e.WithdrawnAtUtc==null), Sessions=c.Sessions.OrderBy(s=>s.StartAtUtc).Select(s=>new{s.Id,s.StartAtUtc,s.EndAtUtc})
-        }).ToListAsync(ct))).AllowAnonymous();
+        group.MapGet("/", async (TutorDbContext db, AccountDirectoryClient directory, CancellationToken ct) =>
+        {
+            var hidden = await directory.HiddenTutorsAsync(ct);
+            var now = DateTimeOffset.UtcNow;
+            return Results.Ok(await db.Courses.AsNoTracking()
+                .Where(c => c.Status != "Cancelled" && c.Sessions.Any(s => s.EndAtUtc > now)
+                    && db.TutorProfiles.Any(t => t.Id == c.TutorId && !hidden.Contains(t.UserId)))
+                .Select(c => new {
+                    c.Id,c.Title,c.TutorId,c.Image,c.Category,c.Description,c.Capacity,c.Status,c.Version,c.CancellationReason,c.CancelledAtUtc,
+                    Instructor=db.TutorProfiles.Where(t=>t.Id==c.TutorId).Select(t=>t.DisplayName).First(),
+                    Enrolled=c.Enrollments.Count(e=>e.WithdrawnAtUtc==null),
+                    Sessions=c.Sessions.OrderBy(s=>s.StartAtUtc).Select(s=>new{s.Id,s.StartAtUtc,s.EndAtUtc})
+                }).ToListAsync(ct));
+        }).AllowAnonymous();
         group.MapGet("/{id}", async (string id,TutorDbContext db,CancellationToken ct) => {
             var course=await db.Courses.AsNoTracking().Include(c=>c.Sessions).Include(c=>c.Enrollments).SingleOrDefaultAsync(c=>c.Id==id,ct);
             if(course is null) return Results.NotFound();

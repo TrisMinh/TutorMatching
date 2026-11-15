@@ -3,6 +3,7 @@ export type AccountPreferences = {emailReminders:boolean;inAppNotifications:bool
 export type AccountRole = 'Student' | 'Tutor';
 
 export type AuthSession = {
+  displayName?: string;
   accessToken: string;
   refreshToken: string;
   accessTokenExpiresAtUtc?: string;
@@ -42,6 +43,7 @@ export class GatewayError extends Error {
 }
 
 export type AuthUser = {
+  displayName?: string;
   userId: string;
   email: string;
   role: AccountRole;
@@ -90,6 +92,8 @@ export type StudentProfile = {
   interests: Array<{ subjectId: string; priority: number }>;
 };
 export type Booking = {
+  tutorName?: string;
+  subjectName?: string;
   cancellationNoticeHours?:number;
   cancellationDeadlineUtc?:string;
   id: string;
@@ -150,7 +154,13 @@ export class GatewayClient {
   saveSettings(settings:AccountPreferences) { return this.request<AccountPreferences>('/api/v1/users/me/settings',{method:'PUT',body:JSON.stringify(settings)}); }
   forgotPassword(email:string) { return this.request<void>('/api/v1/auth/forgot-password',{method:'POST',body:JSON.stringify({email})},false); }
   resetPassword(token:string,password:string) { return this.request<void>('/api/v1/auth/reset-password',{method:'POST',body:JSON.stringify({token,password})},false); }
-  async register(input: { email: string; password: string; role: AccountRole }) {
+  verifyEmail(email: string, code: string) {
+    return this.request<{message: string; role: AccountRole}>('/api/v1/auth/verify-email', {method: 'POST', body: JSON.stringify({email, code})}, false);
+  }
+  resendVerification(email: string) {
+    return this.request<void>('/api/v1/auth/resend-verification', {method: 'POST', body: JSON.stringify({email})}, false);
+  }
+  async register(input: { email: string; password: string; role: AccountRole; fullName?: string }) {
     return this.request<{ id: string; email: string; role: AccountRole; status: string }>(
       '/api/v1/auth/register',
       { method: 'POST', body: JSON.stringify(input) },
@@ -167,7 +177,7 @@ export class GatewayClient {
     this.session.save(tokens, persistent);
     try {
       const user = await this.getCurrentUser();
-      const session = { ...tokens, role: user.role, email: user.email };
+      const session: AuthSession = { ...tokens, role: user.role, email: user.email, displayName: user.displayName };
       this.session.save(session, persistent);
       return { tokens: session, user };
     } catch (error) {
@@ -226,6 +236,8 @@ export class GatewayClient {
   }
   getMyTutorProfile() { return this.request<TutorProfile>('/api/v1/tutors/me'); }
 
+  getSavedTutors() {return this.request<string[]>('/api/v1/students/me/saved-tutors');}
+  saveTutor(id:string,saved:boolean) {return this.request<void>('/api/v1/students/me/saved-tutors/'+encodeURIComponent(id),{method:saved?'PUT':'DELETE'});}
   getStudentProfile() {
     return this.request<StudentProfile>('/api/v1/students/me');
   }
@@ -276,8 +288,13 @@ export class GatewayClient {
     });
   }
 
-  listBookings() {
-    return this.request<Booking[]>('/api/v1/bookings');
+  async listBookings() {
+    const bookings = await this.request<Booking[]>('/api/v1/bookings');
+    if (!bookings.length) return bookings;
+    const subjects = await this.listSubjects().catch(() => []);
+    const tutors = new Map<string, TutorProfile>();
+    await Promise.all([...new Set(bookings.map(b => b.tutorId))].map(async id => {try {tutors.set(id, await this.getTutor(id));} catch { /* Keep genuine booking data readable when a profile is unavailable. */ }}));
+    return bookings.map(booking => ({...booking, tutorName: tutors.get(booking.tutorId)?.displayName, subjectName: subjects.find(s => s.id === booking.subjectId)?.name}));
   }
   getBookingDetails(id:string) { return this.request<{booking:Booking;studentName:string|null;studentAvatarUrl?:string|null}>(`/api/v1/bookings/${encodeURIComponent(id)}`); }
   getBookingStudentProfile(id:string) {return this.request<{id:string;displayName:string;avatarUrl?:string|null;educationLevel?:string;learningGoal?:string;timezone:string}>(`/api/v1/bookings/${encodeURIComponent(id)}/student-profile`);}
@@ -369,7 +386,9 @@ export class GatewayClient {
       ||(method==='DELETE'&&/^\/api\/v1\/bookings\/[^/?]+\?/.test(path))
       ||(method==='PUT'&&/\/read$/.test(path))
       ||(method==='DELETE'&&/^\/api\/v1\/courses\/[^/]+\/enrollments\/me$/.test(path));
-    return resilientFetch(this.fetcher,`${this.baseUrl}${path}`, { ...init, headers },{repeatable});
+    const waitsForEmail = method === 'POST' && ['/api/v1/auth/register', '/api/v1/auth/resend-verification', '/api/v1/auth/forgot-password'].includes(path);
+    return resilientFetch(this.fetcher,`${this.baseUrl}${path}`, { ...init, headers },
+      waitsForEmail ? {repeatable: false, maxAttempts: 1, attemptTimeoutMs: 25000, budgetMs: 25000} : {repeatable});
   }
 
   private refreshSession() {

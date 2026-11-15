@@ -13,6 +13,7 @@ public enum AccountStatus
 {
     Active,
     Disabled,
+    PendingVerification,
 }
 
 public sealed class UserAccount
@@ -22,6 +23,7 @@ public sealed class UserAccount
     }
 
     public Guid Id { get; private set; }
+    public string DisplayName { get; private set; } = string.Empty;
     public string Email { get; private set; } = string.Empty;
     public string NormalizedEmail { get; private set; } = string.Empty;
     public string PasswordHash { get; private set; } = string.Empty;
@@ -59,6 +61,28 @@ public sealed class UserAccount
             UpdatedAtUtc = now,
             Version = 1,
         };
+    }
+
+    public void SetDisplayName(string? displayName)
+    {
+        if (displayName?.Trim().Length > 100) throw new ArgumentException("Name must be at most 100 characters.", nameof(displayName));
+        DisplayName = displayName?.Trim() ?? string.Empty;
+    }
+
+    public void RequireEmailVerification(DateTimeOffset now)
+    {
+        Status = AccountStatus.PendingVerification;
+        UpdatedAtUtc = now;
+        Version++;
+    }
+
+    public void VerifyEmail(DateTimeOffset now)
+    {
+        if (Status != AccountStatus.PendingVerification)
+            throw new InvalidOperationException("Account is not awaiting email verification.");
+        Status = AccountStatus.Active;
+        UpdatedAtUtc = now;
+        Version++;
     }
 
     public void RecordLogin(DateTimeOffset now)

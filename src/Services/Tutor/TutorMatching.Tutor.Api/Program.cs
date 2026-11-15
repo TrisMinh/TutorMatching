@@ -43,6 +43,19 @@ await using (var scope = app.Services.CreateAsyncScope())
     if (dbContext.Database.IsRelational())
     {
         await dbContext.Database.MigrateAsync();
+        var catalog = new (string Code, string Name)[]
+        {
+            ("CHEMISTRY", "Chemistry"), ("BIOLOGY", "Biology"), ("IELTS", "IELTS Preparation"),
+            ("PROGRAMMING", "Programming"), ("WEB", "Web Development"), ("UX", "UX Research"),
+            ("UI", "User Interface Design"), ("FIGMA", "Figma and Prototyping"),
+            ("PHOTOGRAPHY", "Photography"), ("DESIGN", "Design Foundations"),
+            ("TYPOGRAPHY", "Typography"), ("PORTFOLIO", "Portfolio Development")
+        };
+        var existingCodes = await dbContext.Subjects.Select(subject => subject.Code).ToListAsync();
+        foreach (var (code, name) in catalog)
+            if (!existingCodes.Contains(code, StringComparer.OrdinalIgnoreCase))
+                dbContext.Subjects.Add(TutorMatching.Tutor.Api.Domain.Subject.Create(code, name, DateTimeOffset.UtcNow));
+        await dbContext.SaveChangesAsync();
     }
 }
 

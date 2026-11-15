@@ -1,3 +1,4 @@
+using TutorMatching.BuildingBlocks.Email;
 using System.Net.Mail;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -23,7 +24,7 @@ public static class AccountEndpoints
         directory.MapGet("/{id:guid}/delivery", async (Guid id, IdentityDbContext db, CancellationToken ct) =>
         {
             var account = await db.UserAccounts.AsNoTracking().SingleOrDefaultAsync(u => u.Id == id, ct);
-            return account is null ? Results.NotFound() : Results.Ok(new AccountDelivery(id, account.Email, account.CanAuthenticate, await Preferences(db, id, ct), account.Role.ToString()));
+            return account is null ? Results.NotFound() : Results.Ok(new AccountDelivery(id, account.Email, account.CanAuthenticate, await Preferences(db, id, ct), account.Role.ToString(), account.DisplayName));
         });
         var auth = app.MapGroup("/api/v1/auth").RequireRateLimiting("auth");
         auth.MapPost("/forgot-password", ForgotPassword).AllowAnonymous();
@@ -79,10 +80,10 @@ public static class AccountEndpoints
         try
         {
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct); timeout.CancelAfter(TimeSpan.FromSeconds(4));
-            using var mail = new MailMessage(config["Email:From"] ?? "no-reply@demo.tutormatching.local", account.Email,
+            var email = SmtpSettings.FromConfiguration(config);
+            using var mail = new MailMessage(email.From, account.Email,
                 "Reset your TutorMatching password", $"Use this link to reset your password (expires in 30 minutes):\n{link}\n\nIf you did not request this, ignore this email.");
-            using var smtp = new SmtpClient(config["Email:Host"] ?? "localhost", config.GetValue("Email:Port", 1025)) { EnableSsl = config.GetValue("Email:EnableSsl", false) };
-            if (!string.IsNullOrWhiteSpace(config["Email:Username"])) smtp.Credentials = new System.Net.NetworkCredential(config["Email:Username"], config["Email:Password"]);
+            using var smtp = email.CreateClient();
             await smtp.SendMailAsync(mail, timeout.Token);
         }
         catch (Exception ex) when (ex is SmtpException || ex is OperationCanceledException && !ct.IsCancellationRequested)

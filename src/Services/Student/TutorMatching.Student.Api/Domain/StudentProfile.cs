@@ -2,6 +2,7 @@ namespace TutorMatching.Student.Api.Domain;
 
 public enum EducationLevel
 {
+    Unspecified = -1,
     Primary,
     LowerSecondary,
     UpperSecondary,
@@ -52,7 +53,7 @@ public sealed class StudentProfile
             UserId = userId,
             DisplayName = displayName.Trim(),
             EducationLevel = educationLevel,
-            LearningGoal = learningGoal.Trim(),
+            LearningGoal = learningGoal?.Trim() ?? string.Empty,
             Timezone = timezone.Trim(),
             Status = StudentStatus.Active,
             CreatedAtUtc = now,
@@ -71,7 +72,7 @@ public sealed class StudentProfile
         Validate(displayName, learningGoal, timezone);
         DisplayName = displayName.Trim();
         EducationLevel = educationLevel;
-        LearningGoal = learningGoal.Trim();
+        LearningGoal = learningGoal?.Trim() ?? string.Empty;
         Timezone = timezone.Trim();
         UpdatedAtUtc = now;
         Version++;

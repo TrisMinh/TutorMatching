@@ -13,6 +13,9 @@ function renderAt(path: string) {
 }
 
 describe('authentication routes from Figma', () => {
+  beforeEach(() => { sessionStorage.clear(); localStorage.clear();
+    vi.spyOn(gatewayClient,'getStudentProfile').mockResolvedValue({id:'student',userId:'user',displayName:'Test Student',educationLevel:2,learningGoal:'Practice',timezone:'Asia/Ho_Chi_Minh',status:'Active',version:1,interests:[]});
+  });
   afterEach(() => vi.restoreAllMocks());
 
   it.each([
@@ -86,7 +89,7 @@ describe('authentication routes from Figma', () => {
       { email: 'minh@example.com', password: 'TutorMatching!123' },
       false,
     );
-    expect(await screen.findByRole('heading', { name: 'Good morning, Minh' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Welcome, Test Student' })).toBeInTheDocument();
   });
 
   it('shows the Gateway authentication failure on the password field', async () => {
@@ -104,4 +107,56 @@ describe('authentication routes from Figma', () => {
       'Invalid credentials or session.',
     );
   });
+  it('chooses Tutor during registration and opens email verification', async () => {
+    const user = userEvent.setup();
+    const register = vi.spyOn(gatewayClient, 'register').mockResolvedValue({id: 'new-account', email: 'teacher@example.com', role: 'Tutor', status: 'PendingVerification'});
+    renderAt('/auth/sign-up');
+    await user.click(screen.getByRole('button', {name: 'I’m a tutor'}));
+    await user.type(screen.getByLabelText('Full name'), 'New Tutor');
+    await user.type(screen.getByLabelText('Email address'), 'teacher@example.com');
+    await user.type(screen.getByLabelText('Password', {exact: true}), 'TutorMatching!2026');
+    await user.type(screen.getByLabelText('Confirm password'), 'TutorMatching!2026');
+    await user.click(screen.getByRole('button', {name: 'Create account'}));
+    expect(register).toHaveBeenCalledWith({email: 'teacher@example.com', password: 'TutorMatching!2026', role: 'Tutor', fullName: 'New Tutor'});
+    expect(await screen.findByRole('heading', {name: 'Verify your email'})).toBeInTheDocument();
+    expect(screen.getByLabelText('Email address')).toHaveValue('teacher@example.com');
+  });
+
+  it('sign-in has no role selector', () => {
+    renderAt('/auth/sign-in');
+    expect(screen.queryByRole('button', {name: 'I’m a tutor'})).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', {name: 'I’m a student'})).not.toBeInTheDocument();
+  });
+
+  it('pastes and verifies a code before returning to sign-in', async () => {
+    const user = userEvent.setup();
+    sessionStorage.setItem('tutormatching.registration.email', 'teacher@example.com');
+    const verify = vi.spyOn(gatewayClient, 'verifyEmail').mockResolvedValue({message: 'Email verified.', role: 'Tutor'});
+    renderAt('/auth/verify-email');
+    await user.click(screen.getByLabelText('Verification digit 1'));
+    await user.paste('123456');
+    await user.click(screen.getByRole('button', {name: 'Verify email'}));
+    expect(verify).toHaveBeenCalledWith('teacher@example.com', '123456');
+    expect(screen.getByRole('heading', {name: 'Verify your email'})).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('Email verified successfully');
+    expect(screen.getByRole('button', {name: 'Email verified'})).toBeDisabled();
+    expect(await screen.findByRole('heading', {name: 'Welcome back!'}, {timeout: 4500})).toBeInTheDocument();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
+  it('keeps verification errors visible and resends using the entered email', async () => {
+    const user = userEvent.setup();
+    sessionStorage.setItem('tutormatching.registration.email', 'teacher@example.com');
+    vi.spyOn(gatewayClient, 'verifyEmail').mockRejectedValue(new GatewayError(400, {error: 'Invalid or expired verification code.'}));
+    const resend = vi.spyOn(gatewayClient, 'resendVerification').mockResolvedValue();
+    renderAt('/auth/verify-email');
+    await user.click(screen.getByLabelText('Verification digit 1'));
+    await user.paste('123456');
+    await user.click(screen.getByRole('button', {name: 'Verify email'}));
+    expect((await screen.findAllByRole('alert'))[0]).toHaveTextContent('Invalid or expired');
+    await user.click(screen.getByRole('button', {name: 'Resend code'}));
+    expect(resend).toHaveBeenCalledWith('teacher@example.com');
+    expect(await screen.findByRole('button', {name: /Resend in/})).toBeDisabled();
+  });
+
 });

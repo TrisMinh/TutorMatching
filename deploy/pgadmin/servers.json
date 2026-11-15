@@ -1,0 +1,49 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "Identity DB",
+      "Group": "TutorMatching",
+      "Host": "identity-db",
+      "Port": 5432,
+      "MaintenanceDB": "identity_db",
+      "Username": "identity_app",
+      "SSLMode": "prefer"
+    },
+    "2": {
+      "Name": "Tutor DB",
+      "Group": "TutorMatching",
+      "Host": "tutor-db",
+      "Port": 5432,
+      "MaintenanceDB": "tutor_db",
+      "Username": "tutor_app",
+      "SSLMode": "prefer"
+    },
+    "3": {
+      "Name": "Student DB",
+      "Group": "TutorMatching",
+      "Host": "student-db",
+      "Port": 5432,
+      "MaintenanceDB": "student_db",
+      "Username": "student_app",
+      "SSLMode": "prefer"
+    },
+    "4": {
+      "Name": "Scheduling DB",
+      "Group": "TutorMatching",
+      "Host": "scheduling-db",
+      "Port": 5432,
+      "MaintenanceDB": "scheduling_db",
+      "Username": "scheduling_app",
+      "SSLMode": "prefer"
+    },
+    "5": {
+      "Name": "Notification DB",
+      "Group": "TutorMatching",
+      "Host": "notification-db",
+      "Port": 5432,
+      "MaintenanceDB": "notification_db",
+      "Username": "notification_app",
+      "SSLMode": "prefer"
+    }
+  }
+}

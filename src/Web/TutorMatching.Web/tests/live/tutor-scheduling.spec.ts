@@ -1,3 +1,4 @@
+import {verifyEmail} from './verifyEmail';
 import {test,expect} from '@playwright/test';
 async function signIn(page:any,request:any){const r=await request.post('http://localhost:8080/api/v1/auth/login',{data:{email:'tutor01@demo.tutormatching.test',password:'TutorDemo!2026'}});expect(r.ok()).toBeTruthy();await page.addInitScript((s:any)=>localStorage.setItem('tutormatching.auth.session',JSON.stringify({...s,role:'Tutor'})),await r.json());}
 test('tutor schedule shows owned courses and bookings and opens actual lesson',async({page,request})=>{
@@ -20,7 +21,7 @@ test('tutor availability loads saved dates and validates edits',async({page,requ
 });
 test('tutor can persist availability and cancel a real booking through the UI',async({page,request})=>{
  const base='http://localhost:8080/api/v1';const password='TutorDemo!2026';const stamp=Date.now();
- async function account(role:string){const email=`ui.audit.${stamp}.${role}@demo.tutormatching.test`;expect((await request.post(base+'/auth/register',{data:{email,password,role}})).ok()).toBeTruthy();const login=await request.post(base+'/auth/login',{data:{email,password}});return {...await login.json(),role};}
+ async function account(role:string){const email=`ui.audit.${stamp}.${role}@demo.tutormatching.test`;expect((await request.post(base+'/auth/register',{data:{email,password,role}})).ok()).toBeTruthy();await verifyEmail(request,email);const login=await request.post(base+'/auth/login',{data:{email,password}});return {...await login.json(),role};}
  const tutor=await account('Tutor');const student=await account('Student');const tutorHeaders={Authorization:`Bearer ${tutor.accessToken}`};const studentHeaders={Authorization:`Bearer ${student.accessToken}`};
  const profile=await request.put(base+'/tutors/me',{headers:tutorHeaders,data:{displayName:'UI audit teacher',bio:'Scheduling validation',experienceYears:2,avatarUrl:'/assets/figma/student-tutor-1.jpg'}});expect(profile.ok()).toBeTruthy();const tutorId=(await profile.json()).id;
  const subjects=await (await request.get(base+'/subjects')).json();const subjectId=subjects[0].id;

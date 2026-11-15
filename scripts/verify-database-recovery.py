@@ -4,7 +4,7 @@ from pathlib import Path
 root=Path(__file__).resolve().parents[1]
 env_file=root/'.env'
 settings={line.split('=',1)[0]:line.split('=',1)[1] for line in env_file.read_text().splitlines() if '=' in line and not line.startswith('#')} if env_file.exists() else {}
-credentials={'db-'+name:settings.get('POSTGRES_'+name.upper()+'_PASSWORD',name+'_dev') for name in ['scheduling','notification']}
+credentials={'db-'+name:settings.get('LOCAL_ADMIN_PASSWORD','change-me-local-password') for name in ['scheduling','notification']}
 proxies=[]
 def docker(*args):
     result=subprocess.run(['docker',*args],capture_output=True,text=True,cwd=root)

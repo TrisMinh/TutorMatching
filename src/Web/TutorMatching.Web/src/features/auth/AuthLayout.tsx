@@ -63,14 +63,6 @@ export function AuthLayout({ children, screen, slideNumber, slideTitle }: AuthLa
         <div className="auth-mobile-photo" aria-hidden="true">
           <img alt="" src={tutorSlides[activeSlide].image} />
         </div>
-        <footer className="auth-entry__footer">
-          <span className="auth-entry__copyright">© Teach. All rights reserved.</span>
-          <span className="auth-entry__legal">
-            <a href="/privacy">Privacy Policy</a>
-            <span aria-hidden="true">·</span>
-            <a href="/terms">Terms of Service</a>
-          </span>
-        </footer>
       </section>
 
       <aside className="auth-showcase" aria-label="TutorMatching introduction">

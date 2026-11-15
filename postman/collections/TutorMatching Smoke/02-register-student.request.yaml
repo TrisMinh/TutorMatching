@@ -10,7 +10,7 @@ auth:
 body:
   type: json
   content: |-
-    {"email":"student-{{runId}}@example.test","password":"{{password}}","role":"Student"}
+    {"email":"student-{{runId}}@example.test","password":"{{password}}","role":"Student","fullName":"Smoke Student"}
 scripts:
   - type: afterResponse
     code: |-

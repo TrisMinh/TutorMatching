@@ -1,8 +1,9 @@
+import {verifyEmail} from './verifyEmail';
 import {test,expect} from '@playwright/test';
 
 test('lost enrollment response retries without duplicating enrollment or tutor notice',async({page,request})=>{
  const base='http://localhost:8080/api/v1';const password='TutorDemo!2026';const stamp=Date.now();const email=`course.e2e.${stamp}@example.com`;const name=`Retry learner ${stamp}`;
- expect((await request.post(base+'/auth/register',{data:{email,password,role:'Student'}})).status()).toBe(201);
+ expect((await request.post(base+'/auth/register',{data:{email,password,role:'Student'}})).status()).toBe(201);await verifyEmail(request,email);
  const session=await(await request.post(base+'/auth/login',{data:{email,password}})).json();const headers={Authorization:`Bearer ${session.accessToken}`};
  expect((await request.put(base+'/students/me',{headers,data:{displayName:name,educationLevel:2,learningGoal:'Learn design',timezone:'Asia/Ho_Chi_Minh',avatarUrl:'/assets/figma/student-tutor-2.jpg'}})).status()).toBe(200);
  const before=await(await request.get(base+'/courses/ux-research')).json();

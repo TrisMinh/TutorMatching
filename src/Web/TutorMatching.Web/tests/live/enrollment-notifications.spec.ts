@@ -1,7 +1,8 @@
+import {verifyEmail} from './verifyEmail';
 import {test,expect} from '@playwright/test';
 test('direct enrollment creates exactly one owned tutor alert that opens the course and persists read status',async({page,request})=>{
  const base='http://localhost:8080/api/v1';const password='TutorDemo!2026';const stamp=Date.now();const email=`course.e2e.${stamp}@example.com`;const name=`New learner ${stamp}`;
- expect((await request.post(base+'/auth/register',{data:{email,password,role:'Student'}})).ok()).toBeTruthy();
+ expect((await request.post(base+'/auth/register',{data:{email,password,role:'Student'}})).ok()).toBeTruthy();await verifyEmail(request,email);
  const learner=await (await request.post(base+'/auth/login',{data:{email,password}})).json();const studentHeaders={Authorization:`Bearer ${learner.accessToken}`};
  expect((await request.put(base+'/students/me',{headers:studentHeaders,data:{displayName:name,educationLevel:2,learningGoal:'Learn design',timezone:'Asia/Ho_Chi_Minh',avatarUrl:'/assets/figma/student-tutor-2.jpg'}})).ok()).toBeTruthy();
  const teacher=await (await request.post(base+'/auth/login',{data:{email:'tutor01@demo.tutormatching.test',password}})).json();const headers={Authorization:`Bearer ${teacher.accessToken}`};

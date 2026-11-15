@@ -1,9 +1,10 @@
+import {verifyEmail} from './verifyEmail';
 import {test,expect} from '@playwright/test';
 
 for(const role of ['Student','Tutor'] as const){
  test(`${role} settings save to API and survive reload`,async({page,request})=>{
   const email=`prefs.ui.${Date.now()}.${role.toLowerCase()}@example.com`,password='PreferencesUI!2026';
-  expect((await request.post('http://localhost:8080/api/v1/auth/register',{data:{email,password,role}})).status()).toBe(201);
+  expect((await request.post('http://localhost:8080/api/v1/auth/register',{data:{email,password,role}})).status()).toBe(201);await verifyEmail(request,email);
   const session=await (await request.post('http://localhost:8080/api/v1/auth/login',{data:{email,password}})).json();
   await page.addInitScript(value=>localStorage.setItem('tutormatching.auth.session',JSON.stringify(value)),{...session,role,email});
   await page.setViewportSize({width:1440,height:900});await page.goto(`/${role.toLowerCase()}/settings`);
@@ -19,7 +20,7 @@ for(const role of ['Student','Tutor'] as const){
 
 test('password recovery sends actual link and updates password through UI',async({page,request})=>{
  const email=`recovery.ui.${Date.now()}@example.com`,password='RecoveryUI!2026';
- expect((await request.post('http://localhost:8080/api/v1/auth/register',{data:{email,password,role:'Student'}})).status()).toBe(201);
+ expect((await request.post('http://localhost:8080/api/v1/auth/register',{data:{email,password,role:'Student'}})).status()).toBe(201);await verifyEmail(request,email);
  await page.goto('/auth/forgot-password');await page.getByLabel('Email address').fill(email);await page.getByRole('button',{name:'Send reset link'}).click();
  await expect(page.getByRole('heading',{name:'Check your email'})).toBeVisible();await expect(page.getByText(new RegExp(email.replaceAll('.','\\.')))).toBeVisible();
  const inbox=await (await request.get('http://localhost:8025/api/v1/messages?limit=200')).json();

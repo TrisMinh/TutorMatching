@@ -178,3 +178,19 @@ describe('GatewayClient', () => {
     })).rejects.toMatchObject({ message: 'Slot conflicts with a confirmed booking.' });
   });
 });
+
+
+it('allows email delivery to take more than five seconds without aborting or retrying registration', async () => {
+  vi.useFakeTimers();
+  try {
+    const fetcher = vi.fn<typeof fetch>().mockImplementation((_url, init) => new Promise((resolve, reject) => {
+      const timer = setTimeout(() => resolve(jsonResponse({id: 'account', email: 'slow@example.com', role: 'Student', status: 'PendingVerification'}, 201)), 6000);
+      init?.signal?.addEventListener('abort', () => { clearTimeout(timer); reject(init.signal?.reason); });
+    }));
+    const client = new GatewayClient({baseUrl: '', fetcher, session: createSession()});
+    const registration = client.register({email: 'slow@example.com', password: 'Password!2026', role: 'Student'});
+    await vi.advanceTimersByTimeAsync(6000);
+    expect(await registration).toHaveProperty('status', 'PendingVerification');
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  } finally { vi.useRealTimers(); }
+});

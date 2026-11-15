@@ -1,3 +1,4 @@
+import {gatewayClient} from '../api';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { App } from './App';
@@ -37,8 +38,11 @@ describe('application routes', () => {
 
   it('redirects signed-in users away from the other account role', async () => {
     window.sessionStorage.setItem('tutormatching.auth.session', JSON.stringify({ accessToken: 'test', refreshToken: 'test', role: 'Student' }));
+    vi.spyOn(gatewayClient,'getStudentProfile').mockResolvedValue({id:'student',userId:'user',displayName:'Test Student',educationLevel:2,learningGoal:'Practice',timezone:'Asia/Ho_Chi_Minh',status:'Active',version:1,interests:[]});
     renderAt('/tutor/dashboard');
 
-    expect(await screen.findByRole('heading', { name: 'Good morning, Minh' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Welcome, Test Student' })).toBeInTheDocument();
   });
 });
+
+afterEach(()=>vi.restoreAllMocks());

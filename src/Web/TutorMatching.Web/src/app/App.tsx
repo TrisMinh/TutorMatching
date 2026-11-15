@@ -1,3 +1,5 @@
+import {ProfileCompletionGate} from '../shared/ProfileCompletionGate';
+import {ActionNotifications} from '../shared/ActionNotifications';
 import type { ReactNode } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { browserSession, type AccountRole } from '../api';
@@ -11,11 +13,13 @@ export function ProtectedRoute({ children, role }: { children: ReactNode; role: 
   if (session.role !== role) {
     return <Navigate replace to={session.role === 'Tutor' ? '/tutor/dashboard' : '/student/dashboard'} />;
   }
-  return children;
+  return <ProfileCompletionGate role={role}>{children}</ProfileCompletionGate>;
 }
 
 export function App() {
   return (
+    <>
+    <ActionNotifications />
     <Routes>
       <Route path="/" element={<Navigate replace to="/auth/sign-in" />} />
       {(['Student','Tutor'] as const).map(role=><Route key={role} element={<ProtectedRoute role={role}><PersistentAppLayout mode={role==='Tutor'?'tutor':'student'}/></ProtectedRoute>}>
@@ -23,5 +27,6 @@ export function App() {
       </Route>)}
       {appRoutes.filter(route=>!route.access).map(route=><Route key={route.path} path={route.path} element={route.element}/>)}
     </Routes>
+    </>
   );
 }

@@ -1,3 +1,4 @@
+using System.Net.Mail;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -17,30 +18,33 @@ public static class AuthEndpoints
         group.MapPost("/login", LoginAsync).AllowAnonymous();
         group.MapPost("/refresh", RefreshAsync).AllowAnonymous();
         group.MapPost("/revoke", RevokeAsync).AllowAnonymous();
-        endpoints.MapGet("/api/v1/users/me", (ClaimsPrincipal principal) =>
-            Results.Ok(new
-            {
-                userId = principal.FindFirstValue("sub"),
-                email = principal.FindFirstValue("email"),
-                role = principal.FindFirstValue("role"),
-            }))
-            .RequireAuthorization()
-            .WithTags("Users");
+        endpoints.MapGet("/api/v1/users/me", async (ClaimsPrincipal principal, IdentityDbContext db, CancellationToken ct) =>
+        {
+            var id = Guid.Parse(principal.FindFirstValue("sub")!);
+            var account = await db.UserAccounts.AsNoTracking().SingleOrDefaultAsync(a => a.Id == id, ct);
+            return account is null || !account.CanAuthenticate ? Results.Unauthorized() : Results.Ok(new
+            {userId = account.Id, account.Email, role = account.Role.ToString(), account.DisplayName});
+        }).RequireAuthorization().WithTags("Users");
         return endpoints;
     }
 
     private static async Task<IResult> RegisterAsync(
         RegisterRequest request,
+        EmailVerificationService emailVerification,
         IdentityDbContext dbContext,
         IPasswordHasher<string> passwordHasher,
         TimeProvider timeProvider,
         CancellationToken cancellationToken)
     {
+        if (string.IsNullOrWhiteSpace(request.Email) || request.Email.Length > 320 || request.Password is null || request.Password.Length is < 12 or > 128)
+            return Results.BadRequest(new { error = "A valid email and a password of 12-128 characters are required." });
         var normalizedEmail = request.Email.Trim().ToUpperInvariant();
-        if (await dbContext.UserAccounts.AnyAsync(
-            account => account.NormalizedEmail == normalizedEmail,
-            cancellationToken))
+        var existing = await dbContext.UserAccounts.AsNoTracking().SingleOrDefaultAsync(
+            account => account.NormalizedEmail == normalizedEmail, cancellationToken);
+        if (existing is not null)
         {
+            if (existing.Status == AccountStatus.PendingVerification)
+                return Results.Conflict(new {code = "email_verification_required", error = "This email is awaiting verification. Enter the code from your inbox or request a new one."});
             return Results.Conflict(new ProblemDetails
             {
                 Title = "Email is already registered.",
@@ -57,7 +61,7 @@ public static class AuthEndpoints
             });
         }
 
-        if (!Enum.TryParse<AccountRole>(request.Role, true, out var role) || role == AccountRole.Admin)
+        if (!Enum.TryParse<AccountRole>(request.Role, true, out var role) || (role != AccountRole.Student && role != AccountRole.Tutor) || !string.Equals(request.Role, role.ToString(), StringComparison.OrdinalIgnoreCase))
         {
             return Results.ValidationProblem(new Dictionary<string, string[]>
             {
@@ -67,10 +71,16 @@ public static class AuthEndpoints
 
         try
         {
-            var passwordHash = passwordHasher.HashPassword(request.Email, request.Password);
+            await using var transaction = dbContext.Database.IsRelational()
+                ? await dbContext.Database.BeginTransactionAsync(cancellationToken) : null;
+            var passwordHash = passwordHasher.HashPassword(request.Email.Trim(), request.Password);
             var account = UserAccount.Register(request.Email, passwordHash, role, timeProvider.GetUtcNow());
+            account.SetDisplayName(request.FullName);
+            account.RequireEmailVerification(timeProvider.GetUtcNow());
             dbContext.UserAccounts.Add(account);
             await dbContext.SaveChangesAsync(cancellationToken);
+            await emailVerification.IssueAsync(account, cancellationToken);
+            if (transaction is not null) await transaction.CommitAsync(cancellationToken);
             return Results.Created($"/api/v1/users/{account.Id}", new
             {
                 account.Id,
@@ -78,6 +88,10 @@ public static class AuthEndpoints
                 role = account.Role.ToString(),
                 status = account.Status.ToString(),
             });
+        }
+        catch (Exception exception) when (exception is SmtpException || exception is OperationCanceledException && !cancellationToken.IsCancellationRequested)
+        {
+            return Results.Problem(statusCode: 503, title: "Unable to send verification email. Please try again shortly.");
         }
         catch (ArgumentException exception)
         {
@@ -106,7 +120,7 @@ public static class AuthEndpoints
         var account = dbContext.Database.IsRelational()
             ? (await dbContext.UserAccounts.FromSqlInterpolated($"SELECT * FROM user_accounts WHERE normalized_email = {normalizedEmail} FOR UPDATE").ToListAsync(cancellationToken)).SingleOrDefault()
             : await dbContext.UserAccounts.SingleOrDefaultAsync(candidate => candidate.NormalizedEmail == normalizedEmail, cancellationToken);
-        if (account is null || !account.CanAuthenticate)
+        if (account is null || account.Status == AccountStatus.Disabled)
         {
             return Unauthorized();
         }
@@ -117,6 +131,8 @@ public static class AuthEndpoints
             return Unauthorized();
         }
 
+        if (account.Status == AccountStatus.PendingVerification)
+            return Results.Json(new { code = "email_verification_required", error = "Verify your email before signing in." }, statusCode: 403);
         var pair = tokenService.Issue(account);
         account.RecordLogin(timeProvider.GetUtcNow());
         dbContext.RefreshSessions.Add(RefreshSession.Create(
@@ -231,7 +247,7 @@ public static class AuthEndpoints
     };
 }
 
-public sealed record RegisterRequest(string Email, string Password, string Role);
+public sealed record RegisterRequest(string Email, string Password, string Role, string? FullName = null);
 public sealed record LoginRequest(string Email, string Password);
 public sealed record RefreshRequest(string RefreshToken);
 

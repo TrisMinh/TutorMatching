@@ -45,8 +45,9 @@
 }
 
 .auth-entry__content {
-  position: absolute;
-  top: 150px;
+  position: relative;
+  margin-top: 150px;
+  margin-bottom: 40px;
   left: max(32px, calc((100% - 430px) / 2));
   width: min(430px, calc(100% - 64px));
   transform: none;
@@ -55,7 +56,7 @@
 .auth-page--sign-up .auth-entry__content,
 .auth-page--choose-role .auth-entry__content,
 .auth-page--sign-in-error .auth-entry__content {
-  top: 126px;
+  margin-top: 126px;
 }
 
 .auth-page--forgot-password .auth-entry__content,
@@ -63,7 +64,7 @@
 .auth-page--reset-password .auth-entry__content,
 .auth-page--verify-email .auth-entry__content,
 .auth-page--session-expired .auth-entry__content {
-  top: 202px;
+  margin-top: 202px;
 }
 
 .auth-copy h1 {
@@ -338,27 +339,6 @@
 
 .auth-safe-note span {
   color: #20915a;
-}
-
-.auth-entry__footer {
-  position: absolute;
-  bottom: 38px;
-  right: 56px;
-  left: 56px;
-  display: flex;
-  justify-content: space-between;
-  color: var(--color-muted);
-  font-size: 12px;
-  line-height: 18px;
-}
-
-.auth-entry__legal {
-  display: inline-flex;
-  gap: 5px;
-}
-
-.auth-entry__footer a {
-  text-decoration: none;
 }
 
 .auth-mobile-photo {
@@ -674,6 +654,7 @@
   .auth-page--session-expired .auth-entry__content {
     position: static;
     width: 100%;
+    margin: 0;
     transform: none;
   }
 
@@ -728,22 +709,8 @@
     object-fit: cover;
   }
 
-  .auth-entry__footer {
-    position: static;
-    justify-content: center;
-    margin-top: 20px;
-  }
-
-  .auth-entry__copyright {
-    display: none;
-  }
-
   .auth-page:not(.auth-page--sign-in) .auth-mobile-photo {
     display: none;
-  }
-
-  .auth-page:not(.auth-page--sign-in) .auth-entry__footer {
-    margin-top: 42px;
   }
 
   .auth-page--sign-up .auth-form {

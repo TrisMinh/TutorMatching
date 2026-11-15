@@ -1,3 +1,5 @@
+using TutorMatching.Identity.Api.Security;
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -14,9 +16,11 @@ namespace TutorMatching.Identity.Tests;
 public sealed class IdentityApiTests : IClassFixture<IdentityApiFactory>
 {
     private readonly HttpClient client;
+    private readonly IdentityApiFactory factory;
 
     public IdentityApiTests(IdentityApiFactory factory)
     {
+        this.factory = factory;
         client = factory.CreateClient();
     }
 
@@ -32,6 +36,7 @@ public sealed class IdentityApiTests : IClassFixture<IdentityApiFactory>
         });
 
         Assert.Equal(HttpStatusCode.Created, register.StatusCode);
+        await factory.VerifyEmailAsync(client, email);
 
         var login = await client.PostAsJsonAsync("/api/v1/auth/login", new
         {
@@ -69,6 +74,7 @@ public sealed class IdentityApiTests : IClassFixture<IdentityApiFactory>
         var email = $"refresh-{Guid.NewGuid():N}@example.com";
         const string password = "Correct-Horse-Battery-123!";
         await client.PostAsJsonAsync("/api/v1/auth/register", new { email, password, role = "Student" });
+        await factory.VerifyEmailAsync(client, email);
         var login = await client.PostAsJsonAsync("/api/v1/auth/login", new { email, password });
         using var loginBody = JsonDocument.Parse(await login.Content.ReadAsStringAsync());
         var firstToken = loginBody.RootElement.GetProperty("refreshToken").GetString();
@@ -90,6 +96,12 @@ public sealed class IdentityApiTests : IClassFixture<IdentityApiFactory>
 
 public sealed class IdentityApiFactory : WebApplicationFactory<Program>
 {
+    public CapturingVerificationEmailSender Emails { get; } = new();
+    public async Task VerifyEmailAsync(HttpClient client, string email)
+    {
+        var result = await client.PostAsJsonAsync("/api/v1/auth/verify-email", new {email, code = Emails.Codes[email]});
+        Assert.Equal(HttpStatusCode.OK, result.StatusCode);
+    }
     private readonly string databaseName = $"identity-tests-{Guid.NewGuid():N}";
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -97,6 +109,8 @@ public sealed class IdentityApiFactory : WebApplicationFactory<Program>
         builder.UseEnvironment("Development");
         builder.ConfigureServices(services =>
         {
+            services.RemoveAll<IVerificationEmailSender>();
+            services.AddSingleton<IVerificationEmailSender>(Emails);
             services.RemoveAll<DbContextOptions<IdentityDbContext>>();
             services.RemoveAll<IDbContextOptionsConfiguration<IdentityDbContext>>();
             services.AddDbContext<IdentityDbContext>(options =>
@@ -105,3 +119,13 @@ public sealed class IdentityApiFactory : WebApplicationFactory<Program>
     }
 }
 
+
+public sealed class CapturingVerificationEmailSender : IVerificationEmailSender
+{
+    public ConcurrentDictionary<string, string> Codes { get; } = new(StringComparer.OrdinalIgnoreCase);
+    public Task SendAsync(string email, string code, CancellationToken cancellationToken)
+    {
+        Codes[email] = code;
+        return Task.CompletedTask;
+    }
+}

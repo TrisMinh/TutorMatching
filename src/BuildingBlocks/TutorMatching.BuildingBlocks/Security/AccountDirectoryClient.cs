@@ -10,7 +10,7 @@ namespace TutorMatching.BuildingBlocks.Security;
 
 public sealed record AccountPreferences(bool EmailReminders = true, bool InAppNotifications = true,
     bool EnrollmentAlerts = true, bool ProfileVisible = true, int CancellationNoticeHours = 12, int Version = 0);
-public sealed record AccountDelivery(Guid UserId, string Email, bool Active, AccountPreferences Settings, string Role = "Student");
+public sealed record AccountDelivery(Guid UserId, string Email, bool Active, AccountPreferences Settings, string Role = "Student", string DisplayName = "");
 
 // Minimal workload token for the local HS256 architecture; not a user token.
 public sealed class AccountDirectoryClient(HttpClient client, IConfiguration configuration)
