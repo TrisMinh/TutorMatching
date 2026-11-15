@@ -1,6 +1,6 @@
 # Bằng chứng kiểm thử
 
-Kiểm tra trên nhánh `codex/scheduling-coursework`, Docker Compose với 3 Scheduling, ngày 15/11/2026 (GMT+07).
+Kiểm tra trên nhánh `feat/scheduling-coursework`, Docker Compose với 3 Scheduling, ngày 15/11/2026 (GMT+07).
 
 | Kiểm tra | Kết quả |
 |---|---|

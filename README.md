@@ -158,7 +158,7 @@ python scripts/verify-database-recovery.py
 
 ## Các nhánh
 
-- **[codex/scheduling-coursework](https://github.com/TrisMinh/TutorMatching/tree/codex/scheduling-coursework):** bản hiện tại dành cho đồ án Scheduling; giữ JWT, role/owner checks và nghiệp vụ, không cần triển khai PKI.
-- **[codex/advanced-service-security](https://github.com/TrisMinh/TutorMatching/tree/codex/advanced-service-security):** bản lưu riêng các lớp bảo mật nâng cao trước khi rút gọn.
+- **[feat/scheduling-coursework](https://github.com/TrisMinh/TutorMatching/tree/feat/scheduling-coursework):** bản hiện tại dành cho đồ án Scheduling; giữ JWT, role/owner checks và nghiệp vụ, không cần triển khai PKI.
+- **[feat/advanced-service-security](https://github.com/TrisMinh/TutorMatching/tree/feat/advanced-service-security):** bản lưu riêng các lớp bảo mật nâng cao trước khi rút gọn.
 
 Ba Scheduling giúp tiếp tục phục vụ qua replica còn khỏe; request đang chạy có thể lỗi và cần retry theo quy tắc idempotency. Trạng thái phục hồi dựa trên database/Redis dùng chung. Gateway, broker và datastore vẫn là single instance trong demo; đây không phải triển khai HA toàn hệ thống hoặc cấu hình production.
